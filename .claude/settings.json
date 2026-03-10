@@ -1,0 +1,50 @@
+{
+  "hooks": {
+    "SessionEnd": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "caliber refresh --quiet",
+            "description": "Caliber: auto-refreshing docs based on code changes"
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "caliber learn finalize",
+            "description": "Caliber: finalizing session learnings"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "caliber learn observe",
+            "description": "Caliber: recording tool usage for session learning"
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "caliber learn observe --failure",
+            "description": "Caliber: recording tool failure for session learning"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,114 @@
+import { llmCall, estimateTokens } from '../llm/index.js';
+import { extractJson, stripMarkdownFences } from '../llm/utils.js';
+import { LEARN_SYSTEM_PROMPT } from './prompts.js';
+
+interface ToolEvent {
+  timestamp: string;
+  session_id: string;
+  hook_event_name: string;
+  tool_name: string;
+  tool_input: Record<string, unknown>;
+  tool_response: Record<string, unknown>;
+  tool_use_id: string;
+  cwd: string;
+}
+
+interface LearnedSkill {
+  name: string;
+  description: string;
+  content: string;
+  isNew: boolean;
+}
+
+interface AnalysisResult {
+  claudeMdLearnedSection: string | null;
+  skills: LearnedSkill[] | null;
+  explanations: string[];
+}
+
+const MAX_PROMPT_TOKENS = 100_000;
+
+function formatEventsForPrompt(events: ToolEvent[]): string {
+  return events.map((e, i) => {
+    const status = e.hook_event_name === 'PostToolUseFailure' ? 'FAILURE' : 'SUCCESS';
+    const inputStr = JSON.stringify(e.tool_input, null, 2);
+    const responseStr = typeof e.tool_response === 'object' && '_truncated' in e.tool_response
+      ? String(e.tool_response._truncated)
+      : JSON.stringify(e.tool_response, null, 2);
+
+    return `--- Event ${i + 1} [${status}] ---
+Tool: ${e.tool_name}
+Time: ${e.timestamp}
+Input:
+${inputStr}
+Response:
+${responseStr}`;
+  }).join('\n\n');
+}
+
+function trimEventsToFit(events: ToolEvent[], maxTokens: number): ToolEvent[] {
+  let formatted = formatEventsForPrompt(events);
+  if (estimateTokens(formatted) <= maxTokens) return events;
+
+  const kept = events.slice(-Math.floor(events.length / 2));
+  formatted = formatEventsForPrompt(kept);
+  if (estimateTokens(formatted) <= maxTokens) return kept;
+
+  return kept.slice(-50);
+}
+
+function parseAnalysisResponse(raw: string): AnalysisResult {
+  const cleaned = stripMarkdownFences(raw);
+
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    // Fall through to bracket extraction
+  }
+
+  const json = extractJson(cleaned);
+  if (!json) {
+    return { claudeMdLearnedSection: null, skills: null, explanations: ['LLM response could not be parsed.'] };
+  }
+
+  try {
+    return JSON.parse(json);
+  } catch {
+    return { claudeMdLearnedSection: null, skills: null, explanations: ['LLM response contained invalid JSON.'] };
+  }
+}
+
+export async function analyzeEvents(
+  events: ToolEvent[],
+  existingClaudeMd?: string,
+  existingLearnedSection?: string | null,
+  existingSkills?: Array<{ filename: string; content: string }>,
+): Promise<AnalysisResult> {
+  const fittedEvents = trimEventsToFit(events, MAX_PROMPT_TOKENS - 10_000);
+  const eventsText = formatEventsForPrompt(fittedEvents);
+
+  const contextParts: string[] = [];
+
+  if (existingClaudeMd) {
+    contextParts.push(`## Existing CLAUDE.md (do NOT repeat these instructions)\n\n${existingClaudeMd.slice(0, 5000)}`);
+  }
+
+  if (existingLearnedSection) {
+    contextParts.push(`## Existing Learned Section (keep these, add new ones, deduplicate)\n\n${existingLearnedSection}`);
+  }
+
+  if (existingSkills?.length) {
+    const skillsSummary = existingSkills.map(s => `- ${s.filename}: ${s.content.slice(0, 200)}`).join('\n');
+    contextParts.push(`## Existing Skills\n\n${skillsSummary}`);
+  }
+
+  const prompt = `${contextParts.length ? contextParts.join('\n\n---\n\n') + '\n\n---\n\n' : ''}## Tool Events from Session (${fittedEvents.length} events)\n\n${eventsText}`;
+
+  const raw = await llmCall({
+    system: LEARN_SYSTEM_PROMPT,
+    prompt,
+    maxTokens: 4096,
+  });
+
+  return parseAnalysisResponse(raw);
+}

@@ -1,0 +1,84 @@
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
+import type { LLMConfig, ProviderType } from './types.js';
+
+const CONFIG_DIR = path.join(os.homedir(), '.caliber');
+const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
+
+export const DEFAULT_MODELS: Record<ProviderType, string> = {
+  anthropic: 'claude-sonnet-4-6',
+  vertex: 'claude-sonnet-4-6',
+  openai: 'gpt-4.1',
+};
+
+export function loadConfig(): LLMConfig | null {
+  // 1. Env vars take priority
+  const envConfig = resolveFromEnv();
+  if (envConfig) return envConfig;
+
+  // 2. Fall back to config file
+  return readConfigFile();
+}
+
+export function resolveFromEnv(): LLMConfig | null {
+  if (process.env.ANTHROPIC_API_KEY) {
+    return {
+      provider: 'anthropic',
+      apiKey: process.env.ANTHROPIC_API_KEY,
+      model: process.env.CALIBER_MODEL || DEFAULT_MODELS.anthropic,
+    };
+  }
+
+  if (process.env.VERTEX_PROJECT_ID || process.env.GCP_PROJECT_ID) {
+    return {
+      provider: 'vertex',
+      model: process.env.CALIBER_MODEL || DEFAULT_MODELS.vertex,
+      vertexProjectId: process.env.VERTEX_PROJECT_ID || process.env.GCP_PROJECT_ID,
+      vertexRegion: process.env.VERTEX_REGION || process.env.GCP_REGION || 'us-east5',
+      vertexCredentials: process.env.VERTEX_SA_CREDENTIALS || process.env.GOOGLE_APPLICATION_CREDENTIALS,
+    };
+  }
+
+  if (process.env.OPENAI_API_KEY) {
+    return {
+      provider: 'openai',
+      apiKey: process.env.OPENAI_API_KEY,
+      model: process.env.CALIBER_MODEL || DEFAULT_MODELS.openai,
+      baseUrl: process.env.OPENAI_BASE_URL,
+    };
+  }
+
+  return null;
+}
+
+export function readConfigFile(): LLMConfig | null {
+  try {
+    if (!fs.existsSync(CONFIG_FILE)) return null;
+    const raw = fs.readFileSync(CONFIG_FILE, 'utf-8');
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    if (!parsed.provider || !['anthropic', 'vertex', 'openai'].includes(parsed.provider as string)) {
+      return null;
+    }
+    return parsed as unknown as LLMConfig;
+  } catch {
+    return null;
+  }
+}
+
+export function writeConfigFile(config: LLMConfig): void {
+  if (!fs.existsSync(CONFIG_DIR)) {
+    fs.mkdirSync(CONFIG_DIR, { recursive: true });
+  }
+
+  const sanitized = { ...config };
+  if (sanitized.apiKey) {
+    sanitized.apiKey = sanitized.apiKey.trim();
+  }
+
+  fs.writeFileSync(CONFIG_FILE, JSON.stringify(sanitized, null, 2) + '\n', { mode: 0o600 });
+}
+
+export function getConfigFilePath(): string {
+  return CONFIG_FILE;
+}

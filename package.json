@@ -1,0 +1,69 @@
+{
+  "name": "@caliber-ai/caliber",
+  "version": "1.0.0",
+  "description": "Open-source CLI for configuring coding agent environments (CLAUDE.md, .cursorrules, skills). Bring your own LLM.",
+  "type": "module",
+  "bin": {
+    "caliber": "./dist/bin.js"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@anthropic-ai/vertex-sdk": "^0.7.0",
+    "@inquirer/confirm": "^6.0.8",
+    "@inquirer/select": "^5.1.0",
+    "chalk": "^5.4.0",
+    "commander": "^13.0.0",
+    "diff": "^8.0.3",
+    "glob": "^11.0.0",
+    "google-auth-library": "^9.0.0",
+    "openai": "^4.0.0",
+    "ora": "^8.1.0"
+  },
+  "files": [
+    "dist/**/*.js",
+    "README.md",
+    "LICENSE"
+  ],
+  "license": "MIT",
+  "author": "Caliber AI",
+  "keywords": [
+    "caliber",
+    "cli",
+    "coding-agent",
+    "claude",
+    "claude-code",
+    "cursor",
+    "ai",
+    "developer-tools",
+    "claude-md",
+    "cursorrules",
+    "open-source"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rely-ai-org/caliber.git"
+  },
+  "bugs": {
+    "url": "https://github.com/rely-ai-org/caliber/issues"
+  },
+  "homepage": "https://github.com/rely-ai-org/caliber#readme",
+  "devDependencies": {
+    "@types/diff": "^7.0.2",
+    "@types/node": "^22.0.0",
+    "@vitest/coverage-v8": "^4.0.18",
+    "memfs": "^4.56.10",
+    "tsup": "^8.3.0",
+    "typescript": "^5.7.0",
+    "vitest": "^4.0.18"
+  }
+}

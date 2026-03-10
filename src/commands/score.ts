@@ -1,0 +1,39 @@
+import chalk from 'chalk';
+import { computeLocalScore } from '../scoring/index.js';
+import { displayScore } from '../scoring/display.js';
+
+interface ScoreOptions {
+  json?: boolean;
+  quiet?: boolean;
+}
+
+export async function scoreCommand(options: ScoreOptions) {
+  const dir = process.cwd();
+  const result = computeLocalScore(dir);
+
+  if (options.json) {
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+
+  if (options.quiet) {
+    // One-liner for scripts/hooks
+    console.log(`${result.score}/100 (${result.grade})`);
+    return;
+  }
+
+  displayScore(result);
+
+  // Footer suggestion
+  const separator = chalk.gray('  ' + '─'.repeat(53));
+  console.log(separator);
+
+  if (result.score < 40) {
+    console.log(chalk.gray('  Run ') + chalk.hex('#f97316')('caliber init') + chalk.gray(' to generate a complete, optimized setup.'));
+  } else if (result.score < 70) {
+    console.log(chalk.gray('  Run ') + chalk.hex('#f97316')('caliber init') + chalk.gray(' to improve your setup.'));
+  } else {
+    console.log(chalk.green('  Looking good!') + chalk.gray(' Run ') + chalk.hex('#f97316')('caliber update') + chalk.gray(' to keep it fresh.'));
+  }
+  console.log('');
+}
