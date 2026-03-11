@@ -6,7 +6,7 @@ import fs from 'fs';
 import { collectFingerprint, enrichFingerprintWithLLM } from '../fingerprint/index.js';
 import { generateSetup } from '../ai/generate.js';
 import { refineSetup } from '../ai/refine.js';
-import { writeSetup } from '../writers/index.js';
+import { writeSetup, undoSetup } from '../writers/index.js';
 import { stageFiles, cleanupStaging } from '../writers/staging.js';
 import type { StagedFile } from '../writers/staging.js';
 import { detectAvailableEditors, openDiffsInEditor } from '../utils/editor.js';
@@ -325,6 +325,21 @@ export async function initCommand(options: InitOptions) {
 
   // Show score improvement
   const afterScore = computeLocalScore(process.cwd(), targetAgent);
+
+  // Guard: if score regressed, auto-undo
+  if (afterScore.score < baselineScore.score) {
+    console.log('');
+    console.log(chalk.yellow(`  Score would drop from ${baselineScore.score} to ${afterScore.score} — reverting changes.`));
+    try {
+      const { restored, removed } = undoSetup();
+      if (restored.length > 0 || removed.length > 0) {
+        console.log(chalk.dim(`  Reverted ${restored.length + removed.length} file${restored.length + removed.length === 1 ? '' : 's'} from backup.`));
+      }
+    } catch { /* best effort */ }
+    console.log(chalk.dim('  Run `caliber init --force` to override.\n'));
+    return;
+  }
+
   displayScoreDelta(baselineScore, afterScore);
 
   console.log(chalk.bold.green('  Setup complete! Your coding agent is now configured.'));
