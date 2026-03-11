@@ -9,7 +9,7 @@ import { regenerateCommand } from './commands/regenerate.js';
 import { recommendCommand } from './commands/recommend.js';
 import { scoreCommand } from './commands/score.js';
 import { refreshCommand } from './commands/refresh.js';
-import { hooksInstallCommand, hooksRemoveCommand, hooksStatusCommand } from './commands/hooks.js';
+import { hooksInstallCommand, hooksRemoveCommand, hooksInstallPrecommitCommand, hooksRemovePrecommitCommand, hooksStatusCommand } from './commands/hooks.js';
 import { configCommand } from './commands/config.js';
 import {
   learnObserveCommand,
@@ -89,21 +89,31 @@ program
 
 const hooks = program
   .command('hooks')
-  .description('Manage Claude Code session hooks');
+  .description('Manage auto-refresh hooks (Claude Code and git pre-commit)');
 
 hooks
   .command('install')
-  .description('Install auto-refresh SessionEnd hook')
+  .description('Install Claude Code SessionEnd auto-refresh hook')
   .action(hooksInstallCommand);
 
 hooks
   .command('remove')
-  .description('Remove auto-refresh SessionEnd hook')
+  .description('Remove Claude Code SessionEnd auto-refresh hook')
   .action(hooksRemoveCommand);
 
 hooks
+  .command('install-precommit')
+  .description('Install git pre-commit hook for auto-refresh')
+  .action(hooksInstallPrecommitCommand);
+
+hooks
+  .command('remove-precommit')
+  .description('Remove git pre-commit hook')
+  .action(hooksRemovePrecommitCommand);
+
+hooks
   .command('status')
-  .description('Check if auto-refresh hook is installed')
+  .description('Check installed hooks status')
   .action(hooksStatusCommand);
 
 const learn = program

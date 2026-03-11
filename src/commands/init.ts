@@ -12,7 +12,7 @@ import type { StagedFile } from '../writers/staging.js';
 import { detectAvailableEditors, openDiffsInEditor } from '../utils/editor.js';
 import type { ReviewMethod } from '../utils/editor.js';
 import { createTwoFilesPatch } from 'diff';
-import { installHook } from '../lib/hooks.js';
+import { installHook, installPreCommitHook } from '../lib/hooks.js';
 import { installLearningHooks } from '../lib/learning-hooks.js';
 import { writeState, getCurrentHeadSha } from '../lib/state.js';
 import { SpinnerMessages, GENERATION_MESSAGES, REFINE_MESSAGES } from '../utils/spinner-messages.js';
@@ -248,14 +248,16 @@ export async function initCommand(options: InitOptions) {
     targetAgent,
   });
 
-  // Auto-install refresh hook for Claude Code users
-  if (targetAgent === 'claude' || targetAgent === 'both') {
+  // Prompt user for auto-refresh hook preference
+  const hookChoice = await promptHookType(targetAgent);
+
+  if (hookChoice === 'claude' || hookChoice === 'both') {
     const hookResult = installHook();
     if (hookResult.installed) {
-      console.log(`  ${chalk.green('✓')} Auto-refresh hook installed — docs update on Claude Code session end`);
+      console.log(`  ${chalk.green('✓')} Claude Code hook installed — docs update on session end`);
       console.log(chalk.dim('    Run `caliber hooks remove` to disable'));
     } else if (hookResult.alreadyInstalled) {
-      console.log(chalk.dim('  Auto-refresh hook already installed'));
+      console.log(chalk.dim('  Claude Code hook already installed'));
     }
 
     const learnResult = installLearningHooks();
@@ -265,6 +267,22 @@ export async function initCommand(options: InitOptions) {
     } else if (learnResult.alreadyInstalled) {
       console.log(chalk.dim('  Learning hooks already installed'));
     }
+  }
+
+  if (hookChoice === 'precommit' || hookChoice === 'both') {
+    const precommitResult = installPreCommitHook();
+    if (precommitResult.installed) {
+      console.log(`  ${chalk.green('✓')} Pre-commit hook installed — docs refresh before each commit`);
+      console.log(chalk.dim('    Run `caliber hooks remove-precommit` to disable'));
+    } else if (precommitResult.alreadyInstalled) {
+      console.log(chalk.dim('  Pre-commit hook already installed'));
+    } else {
+      console.log(chalk.yellow('  Could not install pre-commit hook (not a git repository?)'));
+    }
+  }
+
+  if (hookChoice === 'skip') {
+    console.log(chalk.dim('  Skipped auto-refresh hooks. Run `caliber hooks install` later to enable.'));
   }
 
   // Show score improvement
@@ -338,6 +356,26 @@ async function promptAgent(): Promise<TargetAgent> {
       { name: 'Cursor', value: 'cursor' as const },
       { name: 'Both', value: 'both' as const },
     ],
+  });
+}
+
+type HookChoice = 'claude' | 'precommit' | 'both' | 'skip';
+
+async function promptHookType(targetAgent: TargetAgent): Promise<HookChoice> {
+  const choices: Array<{ name: string; value: HookChoice }> = [];
+
+  if (targetAgent === 'claude' || targetAgent === 'both') {
+    choices.push({ name: 'Claude Code hook (auto-refresh on session end)', value: 'claude' });
+  }
+  choices.push({ name: 'Git pre-commit hook (refresh before each commit)', value: 'precommit' });
+  if (targetAgent === 'claude' || targetAgent === 'both') {
+    choices.push({ name: 'Both (Claude Code + pre-commit)', value: 'both' });
+  }
+  choices.push({ name: 'Skip for now', value: 'skip' });
+
+  return select({
+    message: 'How would you like to auto-refresh your docs?',
+    choices,
   });
 }
 

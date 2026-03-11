@@ -1,10 +1,10 @@
 import chalk from 'chalk';
-import { isHookInstalled, installHook, removeHook } from '../lib/hooks.js';
+import { isHookInstalled, installHook, removeHook, isPreCommitHookInstalled, installPreCommitHook, removePreCommitHook } from '../lib/hooks.js';
 
 export async function hooksInstallCommand() {
   const result = installHook();
   if (result.alreadyInstalled) {
-    console.log(chalk.dim('Hook already installed.'));
+    console.log(chalk.dim('Claude Code hook already installed.'));
     return;
   }
   console.log(chalk.green('✓') + ' SessionEnd hook installed in .claude/settings.json');
@@ -14,18 +14,52 @@ export async function hooksInstallCommand() {
 export async function hooksRemoveCommand() {
   const result = removeHook();
   if (result.notFound) {
-    console.log(chalk.dim('Hook not found.'));
+    console.log(chalk.dim('Claude Code hook not found.'));
     return;
   }
   console.log(chalk.green('✓') + ' SessionEnd hook removed from .claude/settings.json');
 }
 
+export async function hooksInstallPrecommitCommand() {
+  const result = installPreCommitHook();
+  if (result.alreadyInstalled) {
+    console.log(chalk.dim('Pre-commit hook already installed.'));
+    return;
+  }
+  if (!result.installed) {
+    console.log(chalk.red('Failed to install pre-commit hook (not a git repository?).'));
+    return;
+  }
+  console.log(chalk.green('✓') + ' Pre-commit hook installed in .git/hooks/pre-commit');
+  console.log(chalk.dim('  Docs will auto-refresh before each commit via LLM.'));
+}
+
+export async function hooksRemovePrecommitCommand() {
+  const result = removePreCommitHook();
+  if (result.notFound) {
+    console.log(chalk.dim('Pre-commit hook not found.'));
+    return;
+  }
+  console.log(chalk.green('✓') + ' Pre-commit hook removed from .git/hooks/pre-commit');
+}
+
 export async function hooksStatusCommand() {
-  const installed = isHookInstalled();
-  if (installed) {
-    console.log(chalk.green('✓') + ' Auto-refresh hook is ' + chalk.green('installed'));
+  const claudeInstalled = isHookInstalled();
+  const precommitInstalled = isPreCommitHookInstalled();
+
+  if (claudeInstalled) {
+    console.log(chalk.green('✓') + ' Claude Code hook is ' + chalk.green('installed'));
   } else {
-    console.log(chalk.dim('✗') + ' Auto-refresh hook is ' + chalk.yellow('not installed'));
-    console.log(chalk.dim('  Run `caliber hooks install` to enable auto-refresh on session end.'));
+    console.log(chalk.dim('✗') + ' Claude Code hook is ' + chalk.yellow('not installed'));
+  }
+
+  if (precommitInstalled) {
+    console.log(chalk.green('✓') + ' Pre-commit hook is ' + chalk.green('installed'));
+  } else {
+    console.log(chalk.dim('✗') + ' Pre-commit hook is ' + chalk.yellow('not installed'));
+  }
+
+  if (!claudeInstalled && !precommitInstalled) {
+    console.log(chalk.dim('\n  Run `caliber hooks install` or `caliber hooks install-precommit` to enable auto-refresh.'));
   }
 }

@@ -43,8 +43,10 @@ If you already have these files, Caliber audits them against your actual codebas
 | `caliber recommend` | Discover skills from [skills.sh](https://skills.sh) |
 | `caliber undo` | Revert all changes made by Caliber |
 | `caliber status` | Show current setup status |
-| `caliber hooks install` | Install auto-refresh hook for Claude Code |
-| `caliber hooks remove` | Remove auto-refresh hook |
+| `caliber hooks install` | Install Claude Code auto-refresh hook |
+| `caliber hooks remove` | Remove Claude Code auto-refresh hook |
+| `caliber hooks install-precommit` | Install git pre-commit hook for auto-refresh |
+| `caliber hooks remove-precommit` | Remove git pre-commit hook |
 | `caliber hooks status` | Show installed hooks |
 | `caliber learn install` | Install session learning hooks |
 | `caliber learn status` | Show learned insights from sessions |
@@ -109,11 +111,19 @@ During `caliber init`, a before/after score is displayed so you can see the impr
 
 ### Auto-refresh
 
-After init, Caliber installs a Claude Code hook that automatically updates your docs when code changes:
+During `caliber init`, you'll be prompted to choose how docs auto-refresh:
+
+- **Claude Code hook** — refreshes docs when Claude Code sessions end
+- **Git pre-commit hook** — refreshes docs before each commit
+- **Both** — enables both hooks
+- **Skip** — install later with `caliber hooks install` or `caliber hooks install-precommit`
 
 ```bash
-caliber hooks install    # Install auto-refresh hook
-caliber hooks remove     # Remove it
+caliber hooks install              # Install Claude Code hook
+caliber hooks install-precommit    # Install git pre-commit hook
+caliber hooks remove               # Remove Claude Code hook
+caliber hooks remove-precommit     # Remove pre-commit hook
+caliber hooks status               # Show installed hooks
 ```
 
 ### Session Learning

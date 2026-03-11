@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { execSync } from 'child_process';
 
 const SETTINGS_PATH = path.join('.claude', 'settings.json');
 const HOOK_COMMAND = 'caliber refresh --quiet';
@@ -93,5 +94,87 @@ export function removeHook(): { removed: boolean; notFound: boolean } {
   }
 
   writeSettings(settings);
+  return { removed: true, notFound: false };
+}
+
+// ── Pre-commit hook ──────────────────────────────────────────────────
+
+const PRECOMMIT_START = '# caliber:pre-commit:start';
+const PRECOMMIT_END = '# caliber:pre-commit:end';
+
+const PRECOMMIT_BLOCK = `${PRECOMMIT_START}
+if command -v caliber >/dev/null 2>&1; then
+  caliber refresh --quiet 2>/dev/null || true
+  git diff --name-only -- CLAUDE.md .claude/ .cursor/ AGENTS.md 2>/dev/null | xargs git add 2>/dev/null || true
+fi
+${PRECOMMIT_END}`;
+
+function getGitHooksDir(): string | null {
+  try {
+    const gitDir = execSync('git rev-parse --git-dir', { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+    return path.join(gitDir, 'hooks');
+  } catch {
+    return null;
+  }
+}
+
+function getPreCommitPath(): string | null {
+  const hooksDir = getGitHooksDir();
+  return hooksDir ? path.join(hooksDir, 'pre-commit') : null;
+}
+
+export function isPreCommitHookInstalled(): boolean {
+  const hookPath = getPreCommitPath();
+  if (!hookPath || !fs.existsSync(hookPath)) return false;
+  const content = fs.readFileSync(hookPath, 'utf-8');
+  return content.includes(PRECOMMIT_START);
+}
+
+export function installPreCommitHook(): { installed: boolean; alreadyInstalled: boolean } {
+  if (isPreCommitHookInstalled()) {
+    return { installed: false, alreadyInstalled: true };
+  }
+
+  const hookPath = getPreCommitPath();
+  if (!hookPath) return { installed: false, alreadyInstalled: false };
+
+  const hooksDir = path.dirname(hookPath);
+  if (!fs.existsSync(hooksDir)) fs.mkdirSync(hooksDir, { recursive: true });
+
+  let content = '';
+  if (fs.existsSync(hookPath)) {
+    content = fs.readFileSync(hookPath, 'utf-8');
+    if (!content.endsWith('\n')) content += '\n';
+    content += '\n' + PRECOMMIT_BLOCK + '\n';
+  } else {
+    content = '#!/bin/sh\n\n' + PRECOMMIT_BLOCK + '\n';
+  }
+
+  fs.writeFileSync(hookPath, content);
+  fs.chmodSync(hookPath, 0o755);
+  return { installed: true, alreadyInstalled: false };
+}
+
+export function removePreCommitHook(): { removed: boolean; notFound: boolean } {
+  const hookPath = getPreCommitPath();
+  if (!hookPath || !fs.existsSync(hookPath)) {
+    return { removed: false, notFound: true };
+  }
+
+  let content = fs.readFileSync(hookPath, 'utf-8');
+  if (!content.includes(PRECOMMIT_START)) {
+    return { removed: false, notFound: true };
+  }
+
+  const regex = new RegExp(`\\n?${PRECOMMIT_START}[\\s\\S]*?${PRECOMMIT_END}\\n?`);
+  content = content.replace(regex, '\n');
+
+  // If only the shebang remains, remove the file entirely
+  if (content.trim() === '#!/bin/sh' || content.trim() === '') {
+    fs.unlinkSync(hookPath);
+  } else {
+    fs.writeFileSync(hookPath, content);
+  }
+
   return { removed: true, notFound: false };
 }
