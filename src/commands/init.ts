@@ -78,7 +78,11 @@ export async function initCommand(options: InitOptions) {
   const displayModel = config.model === 'default' && config.provider === 'claude-cli'
     ? process.env.ANTHROPIC_MODEL || 'default (inherited from Claude Code)'
     : config.model;
-  console.log(chalk.dim(`  Provider: ${config.provider} | Model: ${displayModel}\n`));
+  const fastModel = process.env.ANTHROPIC_SMALL_FAST_MODEL;
+  const modelLine = fastModel
+    ? `  Provider: ${config.provider} | Model: ${displayModel} | Scan: ${fastModel}`
+    : `  Provider: ${config.provider} | Model: ${displayModel}`;
+  console.log(chalk.dim(modelLine + '\n'));
 
   // Step 2: Collect fingerprint
   console.log(title.bold('  Step 2/4 — Scan project\n'));
