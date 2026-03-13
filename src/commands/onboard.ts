@@ -125,11 +125,32 @@ export async function initCommand(options: InitOptions) {
     fingerprint.existingConfigs.cursorrules || fingerprint.existingConfigs.cursorRules?.length
   );
 
+  // Checks the LLM cannot fix — they require CLI actions, not config changes
+  const NON_LLM_CHECKS = new Set(['hooks_configured', 'agents_md_exists', 'permissions_configured', 'mcp_servers']);
+
   // Score gating: skip generation if already perfect, targeted fix if close
   if (hasExistingConfig && baselineScore.score === 100) {
     console.log(chalk.bold.green('  Your setup is already optimal — nothing to change.\n'));
     console.log(chalk.dim('  Run ') + chalk.hex('#83D1EB')('caliber onboard --force') + chalk.dim(' to regenerate anyway.\n'));
     if (!options.force) return;
+  }
+
+  // If the only failing checks are non-LLM-fixable, skip generation and show actionable hints
+  const allFailingChecks = baselineScore.checks.filter(c => !c.passed && c.maxPoints > 0);
+  const llmFixableChecks = allFailingChecks.filter(c => !NON_LLM_CHECKS.has(c.id));
+
+  if (hasExistingConfig && llmFixableChecks.length === 0 && allFailingChecks.length > 0 && !options.force) {
+    console.log(chalk.bold.green('\n  Your config is fully optimized for LLM generation.\n'));
+    console.log(chalk.dim('  Remaining items need CLI actions:\n'));
+    for (const check of allFailingChecks) {
+      console.log(chalk.dim(`    • ${check.name}`));
+      if (check.suggestion) {
+        console.log(`      ${chalk.hex('#83D1EB')(check.suggestion)}`);
+      }
+    }
+    console.log('');
+    console.log(chalk.dim('  Run ') + chalk.hex('#83D1EB')('caliber onboard --force') + chalk.dim(' to regenerate anyway.\n'));
+    return;
   }
 
   // Get project description if empty directory
@@ -144,8 +165,7 @@ export async function initCommand(options: InitOptions) {
   let currentScore: number | undefined;
 
   if (hasExistingConfig && baselineScore.score >= 95 && !options.force) {
-    failingChecks = baselineScore.checks
-      .filter(c => !c.passed && c.maxPoints > 0)
+    failingChecks = llmFixableChecks
       .map(c => ({ name: c.name, suggestion: c.suggestion }));
     passingChecks = baselineScore.checks
       .filter(c => c.passed)
@@ -238,15 +258,24 @@ export async function initCommand(options: InitOptions) {
   const setupFiles = collectSetupFiles(generatedSetup);
   const staged = stageFiles(setupFiles, process.cwd());
 
-  console.log(chalk.dim(`  ${chalk.green(`${staged.newFiles} new`)} / ${chalk.yellow(`${staged.modifiedFiles} modified`)} file${staged.newFiles + staged.modifiedFiles !== 1 ? 's' : ''}\n`));
+  const totalChanges = staged.newFiles + staged.modifiedFiles;
+  console.log(chalk.dim(`  ${chalk.green(`${staged.newFiles} new`)} / ${chalk.yellow(`${staged.modifiedFiles} modified`)} file${totalChanges !== 1 ? 's' : ''}\n`));
 
-  const wantsReview = await promptWantsReview();
-  if (wantsReview) {
-    const reviewMethod = await promptReviewMethod();
-    await openReview(reviewMethod, staged.stagedFiles);
+  let action: 'accept' | 'refine' | 'decline';
+
+  if (totalChanges === 0) {
+    console.log(chalk.dim('  No changes needed — your configs are already up to date.\n'));
+    cleanupStaging();
+    action = 'accept';
+  } else {
+    const wantsReview = await promptWantsReview();
+    if (wantsReview) {
+      const reviewMethod = await promptReviewMethod();
+      await openReview(reviewMethod, staged.stagedFiles);
+    }
+
+    action = await promptReviewAction();
   }
-
-  let action = await promptReviewAction();
 
   while (action === 'refine') {
     generatedSetup = await refineLoop(generatedSetup, targetAgent, sessionHistory);
