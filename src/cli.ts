@@ -99,6 +99,7 @@ program
   .option('--agent <type>', 'Target agents (comma-separated): claude, cursor, codex', parseAgentOption)
   .option('--dry-run', 'Preview changes without writing files')
   .option('--force', 'Overwrite existing setup without prompting')
+  .option('--debug-report', undefined, false)
   .action(tracked('onboard', initCommand));
 
 program

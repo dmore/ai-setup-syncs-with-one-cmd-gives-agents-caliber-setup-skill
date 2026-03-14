@@ -1,3 +1,4 @@
+import path from 'path';
 import chalk from 'chalk';
 import ora from 'ora';
 import readline from 'readline';
@@ -25,6 +26,8 @@ import { readDismissedChecks, writeDismissedChecks } from '../scoring/dismissed.
 import type { DismissedCheck } from '../scoring/dismissed.js';
 import { searchAndInstallSkills } from './recommend.js';
 import type { FailingCheck, PassingCheck } from '../ai/generate.js';
+import { buildGeneratePrompt } from '../ai/generate.js';
+import { DebugReport } from '../lib/debug-report.js';
 import {
   trackInitProviderSelected,
   trackInitProjectDiscovered,
@@ -46,6 +49,7 @@ interface InitOptions {
   agent?: TargetAgent;
   dryRun?: boolean;
   force?: boolean;
+  debugReport?: boolean;
 }
 
 export async function initCommand(options: InitOptions) {
@@ -64,6 +68,8 @@ export async function initCommand(options: InitOptions) {
   console.log(title.bold('  Welcome to Caliber\n'));
   console.log(chalk.dim('  Caliber analyzes your codebase and creates tailored config files'));
   console.log(chalk.dim('  so your AI coding agents understand your project from day one.\n'));
+
+  const report = options.debugReport ? new DebugReport() : null;
 
   console.log(title.bold('  How onboarding works:\n'));
   console.log(chalk.dim('  1. Connect    Set up your LLM provider'));
@@ -103,6 +109,11 @@ export async function initCommand(options: InitOptions) {
     : `  Provider: ${config.provider} | Model: ${displayModel}`;
   console.log(chalk.dim(modelLine + '\n'));
 
+  if (report) {
+    report.markStep('Provider setup');
+    report.addSection('LLM Provider', `- **Provider**: ${config.provider}\n- **Model**: ${displayModel}\n- **Fast model**: ${fastModel || 'none'}`);
+  }
+
   // Verify configured model is reachable before starting heavy work
   await validateModel({ fast: true });
 
@@ -116,6 +127,17 @@ export async function initCommand(options: InitOptions) {
   trackInitProjectDiscovered(fingerprint.languages.length, fingerprint.frameworks.length, fingerprint.fileTree.length);
   console.log(chalk.dim(`  Languages: ${fingerprint.languages.join(', ') || 'none detected'}`));
   console.log(chalk.dim(`  Files: ${fingerprint.fileTree.length} found\n`));
+
+  if (report) {
+    report.markStep('Fingerprint');
+    report.addJson('Fingerprint: Git', { remote: fingerprint.remote, packageName: fingerprint.packageName });
+    report.addCodeBlock('Fingerprint: File Tree', fingerprint.fileTree.join('\n'));
+    report.addJson('Fingerprint: Detected Stack', { languages: fingerprint.languages, frameworks: fingerprint.frameworks, tools: fingerprint.tools });
+    report.addJson('Fingerprint: Existing Configs', fingerprint.existingConfigs);
+    if (fingerprint.codeAnalysis) {
+      report.addJson('Fingerprint: Code Analysis', fingerprint.codeAnalysis);
+    }
+  }
 
   // Step 3: Determine target agent
   const targetAgent = options.agent || await promptAgent();
@@ -139,6 +161,13 @@ export async function initCommand(options: InitOptions) {
   displayScoreSummary(baselineScore);
   const passingCount = baselineScore.checks.filter(c => c.passed).length;
   const failingCount = baselineScore.checks.filter(c => !c.passed).length;
+
+  if (report) {
+    report.markStep('Baseline scoring');
+    report.addSection('Scoring: Baseline', `**Score**: ${baselineScore.score}/100\n\n| Check | Passed | Points | Max |\n|-------|--------|--------|-----|\n` +
+      baselineScore.checks.map(c => `| ${c.name} | ${c.passed ? 'Yes' : 'No'} | ${c.points} | ${c.maxPoints} |`).join('\n'));
+    report.addSection('Generation: Target Agents', targetAgent.join(', '));
+  }
 
   const hasExistingConfig = !!(
     fingerprint.existingConfigs.claudeMd || fingerprint.existingConfigs.claudeSettings ||
@@ -215,6 +244,12 @@ export async function initCommand(options: InitOptions) {
   }
   console.log(chalk.dim('  This can take a couple of minutes depending on your model and provider.\n'));
 
+  if (report) {
+    report.markStep('Generation');
+    const fullPrompt = buildGeneratePrompt(fingerprint, targetAgent, fingerprint.description, failingChecks, currentScore, passingChecks);
+    report.addCodeBlock('Generation: Full LLM Prompt', fullPrompt);
+  }
+
   trackInitGenerationStarted(!!failingChecks);
   const genStartTime = Date.now();
   const genSpinner = ora('Generating setup...').start();
@@ -262,6 +297,11 @@ export async function initCommand(options: InitOptions) {
       console.log(chalk.dim(rawOutput.slice(0, 500)));
     }
     throw new Error('__exit__');
+  }
+
+  if (report) {
+    if (rawOutput) report.addCodeBlock('Generation: Raw LLM Response', rawOutput);
+    report.addJson('Generation: Parsed Setup', generatedSetup);
   }
 
   const elapsedMs = Date.now() - genStartTime;
@@ -438,6 +478,12 @@ export async function initCommand(options: InitOptions) {
     return;
   }
 
+  if (report) {
+    report.markStep('Post-write scoring');
+    report.addSection('Scoring: Post-Write', `**Score**: ${afterScore.score}/100 (delta: ${afterScore.score - baselineScore.score >= 0 ? '+' : ''}${afterScore.score - baselineScore.score})\n\n| Check | Passed | Points | Max |\n|-------|--------|--------|-----|\n` +
+      afterScore.checks.map(c => `| ${c.name} | ${c.passed ? 'Yes' : 'No'} | ${c.points} | ${c.maxPoints} |`).join('\n'));
+  }
+
   displayScoreDelta(baselineScore, afterScore);
 
   // Step 6: Community skills
@@ -475,6 +521,13 @@ export async function initCommand(options: InitOptions) {
   console.log(`    ${title('caliber skills')}         Discover community skills for your stack`);
   console.log(`    ${title('caliber undo')}         Revert all changes from this run`);
   console.log('');
+
+  if (report) {
+    report.markStep('Finished');
+    const reportPath = path.join(process.cwd(), '.caliber', 'debug-report.md');
+    report.write(reportPath);
+    console.log(chalk.dim(`  Debug report written to ${path.relative(process.cwd(), reportPath)}\n`));
+  }
 }
 
 async function refineLoop(
