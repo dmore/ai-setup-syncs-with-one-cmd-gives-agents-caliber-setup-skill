@@ -1,18 +1,22 @@
 import chalk from 'chalk';
 import ora from 'ora';
-import confirm from '@inquirer/confirm';
-import { collectFingerprint } from '../fingerprint/index.js';
+import select from '@inquirer/select';
+import { collectFingerprint, enrichFingerprintWithLLM } from '../fingerprint/index.js';
 import { generateSetup } from '../ai/generate.js';
-import { writeSetup } from '../writers/index.js';
+import { writeSetup, undoSetup } from '../writers/index.js';
+import { stageFiles, cleanupStaging } from '../writers/staging.js';
 import { readManifest } from '../writers/manifest.js';
 import { loadConfig } from '../llm/config.js';
-import { readState } from '../lib/state.js';
+import { readState, writeState, getCurrentHeadSha } from '../lib/state.js';
+import { computeLocalScore } from '../scoring/index.js';
+import { displayScoreSummary, displayScoreDelta } from '../scoring/display.js';
 import { SpinnerMessages, GENERATION_MESSAGES } from '../utils/spinner-messages.js';
+import { collectSetupFiles } from './setup-files.js';
 
 export async function regenerateCommand(options: { dryRun?: boolean }) {
   const config = loadConfig();
   if (!config) {
-    console.log(chalk.red('No LLM provider configured. Run ') + chalk.hex('#83D1EB')('caliber config') + chalk.red(' (e.g. choose Cursor) or set ANTHROPIC_API_KEY.'));
+    console.log(chalk.red('No LLM provider configured. Run ') + chalk.hex('#83D1EB')('caliber config') + chalk.red(' first.'));
     throw new Error('__exit__');
   }
 
@@ -22,18 +26,26 @@ export async function regenerateCommand(options: { dryRun?: boolean }) {
     throw new Error('__exit__');
   }
 
-  const spinner = ora('Re-analyzing project...').start();
-  const fingerprint = collectFingerprint(process.cwd());
-  spinner.succeed('Project re-analyzed');
+  const targetAgent = readState()?.targetAgent ?? ['claude', 'cursor'];
 
+  // 1. Fingerprint
+  const spinner = ora('Analyzing project...').start();
+  const fingerprint = collectFingerprint(process.cwd());
+  await enrichFingerprintWithLLM(fingerprint, process.cwd());
+  spinner.succeed('Project analyzed');
+
+  // 2. Baseline score
+  const baselineScore = computeLocalScore(process.cwd(), targetAgent);
+  displayScoreSummary(baselineScore);
+
+  // 3. Generate
   const genSpinner = ora('Regenerating setup...').start();
-  const genMessages = new SpinnerMessages(genSpinner, GENERATION_MESSAGES);
+  const genMessages = new SpinnerMessages(genSpinner, GENERATION_MESSAGES, { showElapsedTime: true });
   genMessages.start();
 
   let generatedSetup: Record<string, unknown> | null = null;
 
   try {
-    const targetAgent = readState()?.targetAgent ?? ['claude', 'cursor'];
     const result = await generateSetup(
       fingerprint,
       targetAgent,
@@ -65,24 +77,92 @@ export async function regenerateCommand(options: { dryRun?: boolean }) {
 
   genSpinner.succeed('Setup regenerated');
 
+  // 4. Diff review
+  const setupFiles = collectSetupFiles(generatedSetup);
+  const staged = stageFiles(setupFiles, process.cwd());
+  const totalChanges = staged.newFiles + staged.modifiedFiles;
+
+  console.log(chalk.dim(`\n  ${chalk.green(`${staged.newFiles} new`)} / ${chalk.yellow(`${staged.modifiedFiles} modified`)} file${totalChanges !== 1 ? 's' : ''}\n`));
+
+  if (totalChanges === 0) {
+    console.log(chalk.dim('  No changes needed — your configs are already up to date.\n'));
+    cleanupStaging();
+    return;
+  }
+
   if (options.dryRun) {
-    console.log(chalk.yellow('\n[Dry run] Would write:'));
-    console.log(JSON.stringify(generatedSetup, null, 2));
+    console.log(chalk.yellow('[Dry run] Would write:'));
+    for (const f of staged.stagedFiles) {
+      console.log(`  ${f.isNew ? chalk.green('+') : chalk.yellow('~')} ${f.relativePath}`);
+    }
+    cleanupStaging();
     return;
   }
 
-  const shouldApply = await confirm({ message: 'Apply regenerated setup?', default: true });
-  if (!shouldApply) {
-    console.log(chalk.dim('Regeneration cancelled.'));
+  const action = await select({
+    message: 'Apply regenerated setup?',
+    choices: [
+      { name: 'Accept and apply', value: 'accept' as const },
+      { name: 'Decline', value: 'decline' as const },
+    ],
+  });
+
+  cleanupStaging();
+
+  if (action === 'decline') {
+    console.log(chalk.dim('Regeneration cancelled. No files were modified.'));
     return;
   }
 
-  const writeSpinner = ora('Updating config files...').start();
-  const result = writeSetup(generatedSetup as unknown as Parameters<typeof writeSetup>[0]);
-  writeSpinner.succeed('Config files updated');
+  // 5. Write
+  const writeSpinner = ora('Writing config files...').start();
+  try {
+    const result = writeSetup(generatedSetup as unknown as Parameters<typeof writeSetup>[0]);
+    writeSpinner.succeed('Config files written');
 
-  for (const file of result.written) {
-    console.log(`  ${chalk.green('✓')} ${file}`);
+    for (const file of result.written) {
+      console.log(`  ${chalk.green('✓')} ${file}`);
+    }
+    if (result.deleted.length > 0) {
+      for (const file of result.deleted) {
+        console.log(`  ${chalk.red('✗')} ${file}`);
+      }
+    }
+    if (result.backupDir) {
+      console.log(chalk.dim(`\n  Backups saved to ${result.backupDir}`));
+    }
+  } catch (err) {
+    writeSpinner.fail('Failed to write files');
+    console.error(chalk.red(err instanceof Error ? err.message : 'Unknown error'));
+    throw new Error('__exit__');
   }
-  console.log('');
+
+  // Update state
+  const sha = getCurrentHeadSha();
+  writeState({
+    lastRefreshSha: sha ?? '',
+    lastRefreshTimestamp: new Date().toISOString(),
+    targetAgent,
+  });
+
+  // 6. Score delta + regression guard
+  const afterScore = computeLocalScore(process.cwd(), targetAgent);
+
+  if (afterScore.score < baselineScore.score) {
+    console.log('');
+    console.log(chalk.yellow(`  Score would drop from ${baselineScore.score} to ${afterScore.score} — reverting changes.`));
+    try {
+      const { restored, removed } = undoSetup();
+      if (restored.length > 0 || removed.length > 0) {
+        console.log(chalk.dim(`  Reverted ${restored.length + removed.length} file${restored.length + removed.length === 1 ? '' : 's'} from backup.`));
+      }
+    } catch { /* best effort */ }
+    console.log(chalk.dim('  Run ') + chalk.hex('#83D1EB')('caliber onboard --force') + chalk.dim(' to override.\n'));
+    return;
+  }
+
+  displayScoreDelta(baselineScore, afterScore);
+
+  console.log(chalk.bold.green('  Regeneration complete!'));
+  console.log(chalk.dim('  Run ') + chalk.hex('#83D1EB')('caliber undo') + chalk.dim(' to revert changes.\n'));
 }

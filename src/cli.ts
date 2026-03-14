@@ -69,7 +69,6 @@ program
   .command('regenerate')
   .alias('regen')
   .alias('re')
-  .alias('update')
   .description('Re-analyze project and regenerate setup')
   .option('--dry-run', 'Preview changes without writing files')
   .action(regenerateCommand);

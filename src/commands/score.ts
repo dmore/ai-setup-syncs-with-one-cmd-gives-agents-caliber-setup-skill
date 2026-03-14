@@ -35,7 +35,7 @@ export async function scoreCommand(options: ScoreOptions) {
   } else if (result.score < 70) {
     console.log(chalk.gray('  Run ') + chalk.hex('#83D1EB')('caliber onboard') + chalk.gray(' to improve your setup.'));
   } else {
-    console.log(chalk.green('  Looking good!') + chalk.gray(' Run ') + chalk.hex('#83D1EB')('caliber update') + chalk.gray(' to keep it fresh.'));
+    console.log(chalk.green('  Looking good!') + chalk.gray(' Run ') + chalk.hex('#83D1EB')('caliber regenerate') + chalk.gray(' to rebuild from scratch.'));
   }
   console.log('');
 }
