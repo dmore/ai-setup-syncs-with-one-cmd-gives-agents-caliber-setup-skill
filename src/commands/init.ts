@@ -366,7 +366,30 @@ export async function initCommand(options: InitOptions) {
           );
 
           if (polishResult.setup) {
+            // Preserve skills from the original setup — polish runs with skipSkills
+            const origClaude = generatedSetup.claude as Record<string, unknown> | undefined;
+            const origCodex = generatedSetup.codex as Record<string, unknown> | undefined;
+            const origCursor = generatedSetup.cursor as Record<string, unknown> | undefined;
+
             generatedSetup = polishResult.setup;
+
+            const polishedClaude = (generatedSetup.claude ?? {}) as Record<string, unknown>;
+            const polishedCodex = (generatedSetup.codex ?? {}) as Record<string, unknown>;
+            const polishedCursor = (generatedSetup.cursor ?? {}) as Record<string, unknown>;
+
+            if (origClaude?.skills && !polishedClaude.skills) {
+              polishedClaude.skills = origClaude.skills;
+              generatedSetup.claude = polishedClaude;
+            }
+            if (origCodex?.skills && !polishedCodex.skills) {
+              polishedCodex.skills = origCodex.skills;
+              generatedSetup.codex = polishedCodex;
+            }
+            if (origCursor?.skills && !polishedCursor.skills) {
+              polishedCursor.skills = origCursor.skills;
+              generatedSetup.cursor = polishedCursor;
+            }
+
             writeSetup(generatedSetup as unknown as Parameters<typeof writeSetup>[0]);
             log(options.verbose, 'Inline polish applied');
           }
