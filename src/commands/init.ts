@@ -136,25 +136,7 @@ export async function initCommand(options: InitOptions) {
 
   trackInitProjectDiscovered(fingerprint.languages.length, fingerprint.frameworks.length, fingerprint.fileTree.length);
   console.log(chalk.dim(`  Languages: ${fingerprint.languages.join(', ') || 'none detected'}`));
-  console.log(chalk.dim(`  Files: ${fingerprint.fileTree.length} found`));
-  if (fingerprint.codeAnalysis) {
-    const ca = fingerprint.codeAnalysis;
-    const compressionPct = ca.totalProjectTokens > 0
-      ? Math.round((1 - ca.compressedTokens / ca.totalProjectTokens) * 100)
-      : 0;
-    const parts = [`Context: ~${ca.includedTokens.toLocaleString()} tokens sent`];
-    if (ca.truncated) {
-      parts.push(`(${Math.round((ca.includedTokens / ca.totalProjectTokens) * 100)}% of ${ca.totalProjectTokens.toLocaleString()} total)`);
-    }
-    if (compressionPct > 5) {
-      parts.push(`compressed ${compressionPct}%`);
-    }
-    if (ca.duplicateGroups > 0) {
-      parts.push(`${ca.duplicateGroups} duplicate group${ca.duplicateGroups === 1 ? '' : 's'} merged`);
-    }
-    console.log(chalk.dim(`  ${parts.join(' · ')}`));
-  }
-  console.log('');
+  console.log(chalk.dim(`  Files: ${fingerprint.fileTree.length} found\n`));
 
   if (report) {
     report.markStep('Fingerprint');
