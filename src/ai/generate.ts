@@ -502,7 +502,14 @@ export function buildGeneratePrompt(
         parts.push(`- ${check.name}`);
       }
     }
-    parts.push(`\nIMPORTANT: Return the existing CLAUDE.md and skills with MINIMAL changes — only the edits needed to fix the above checks. Do NOT rewrite, restructure, rephrase, or make cosmetic changes. Preserve the existing content as-is except for targeted fixes. If a skill file is not related to a failing check, return it EXACTLY as-is, character for character.`);
+    parts.push(`\nIMPORTANT RULES FOR TARGETED FIX:
+- Return the existing CLAUDE.md and skills with MINIMAL changes — only the edits needed to fix the above checks.
+- Do NOT rewrite, restructure, rephrase, or make cosmetic changes.
+- Preserve the existing content as-is except for targeted fixes.
+- If a skill file is not related to a failing check, return it EXACTLY as-is, character for character.
+- For "Documented commands exist": DELETE the specific invalid commands listed in the suggestion. Do NOT replace them with other commands unless you are 100% certain they exist.
+- For "Documented paths exist": DELETE the specific non-existent paths listed in the suggestion. Do NOT replace them with guessed paths.
+- For "Concise context files": Remove the least important lines to get under the line limit. Do NOT add new content.`);
   } else if (hasExistingConfigs) {
     parts.push(`Audit and improve the existing coding agent configuration for target: ${targetAgent}`);
   } else {

@@ -53,10 +53,12 @@ export function collectSetupFiles(setup: Record<string, unknown>): Array<{ path:
     if (cursor) agentRefs.push('See `.cursor/rules/` for Cursor rules.');
     if (agentRefs.length === 0) agentRefs.push('See CLAUDE.md and .cursor/rules/ for agent configurations.');
 
-    files.push({
-      path: 'AGENTS.md',
-      content: `# AGENTS.md\n\nThis project uses AI coding agents configured by [Caliber](https://github.com/rely-ai-org/caliber).\n\n${agentRefs.join(' ')}\n`,
-    });
+    const stubContent = `# AGENTS.md\n\nThis project uses AI coding agents configured by [Caliber](https://github.com/rely-ai-org/caliber).\n\n${agentRefs.join(' ')}\n`;
+    files.push({ path: 'AGENTS.md', content: stubContent });
+
+    // Inject into setup so writeSetup() writes it too
+    if (!setup.codex) setup.codex = {};
+    (setup.codex as Record<string, unknown>).agentsMd = stubContent;
   }
 
   return files;

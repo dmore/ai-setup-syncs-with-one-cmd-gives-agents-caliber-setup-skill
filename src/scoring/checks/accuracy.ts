@@ -222,7 +222,7 @@ export function checkAccuracy(dir: string): Check[] {
       ? 'No commands documented'
       : `${cmds.valid.length}/${cmds.total} commands verified`,
     suggestion: cmds.invalid.length > 0
-      ? `Invalid: ${cmds.invalid[0]}${cmds.invalid.length > 1 ? ` (+${cmds.invalid.length - 1} more)` : ''}`
+      ? `Remove these invalid commands from CLAUDE.md: ${cmds.invalid.join('; ')}`
       : undefined,
   });
 
@@ -244,7 +244,7 @@ export function checkAccuracy(dir: string): Check[] {
       ? 'No file paths documented'
       : `${paths.valid.length}/${paths.total} paths verified`,
     suggestion: paths.invalid.length > 0
-      ? `Stale path: ${paths.invalid[0]}${paths.invalid.length > 1 ? ` (+${paths.invalid.length - 1} more)` : ''}`
+      ? `Remove these non-existent paths from CLAUDE.md: ${paths.invalid.join('; ')}`
       : undefined,
   });
 
