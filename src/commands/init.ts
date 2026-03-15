@@ -724,7 +724,7 @@ Return {"valid": true} or {"valid": false}. Nothing else.`,
 
 async function evaluateDismissals(
   failingChecks: readonly Check[],
-  fingerprint: { languages: string[]; frameworks: string[] },
+  fingerprint: { languages: string[]; frameworks: string[]; fileTree: string[]; tools: string[] },
 ): Promise<DismissedCheck[]> {
   const fastModel = getFastModel();
   const checkList = failingChecks.map(c => ({
@@ -733,21 +733,33 @@ async function evaluateDismissals(
     suggestion: c.suggestion,
   }));
 
+  const hasBuildFiles = fingerprint.fileTree.some(f =>
+    /^(package\.json|Makefile|Cargo\.toml|go\.mod|pyproject\.toml|requirements\.txt|build\.gradle|pom\.xml)$/i.test(f.split('/').pop() || '')
+  );
+  const topFiles = fingerprint.fileTree.slice(0, 30).join(', ');
+
   try {
     const result = await llmJsonCall<{ dismissed: Array<{ id: string; reason: string }> }>({
       system: `You evaluate whether scoring checks are applicable to a project.
-Given the project's languages/frameworks and a list of failing checks, return which checks are NOT applicable.
+Given the project context and a list of failing checks, return which checks are NOT applicable.
 
-Only dismiss checks that truly don't apply — e.g. "Build/test/lint commands" for a pure Terraform/HCL repo with no build system.
+Only dismiss checks that truly don't apply. Examples:
+- "Build/test/lint commands" for a GitOps/Helm/Terraform/config repo with no build system
+- "Build/test/lint commands" for a repo with only YAML, HCL, or config files and no package.json/Makefile
+- "Dependency coverage" for a repo with no package manager
+
 Do NOT dismiss checks that could reasonably apply even if the project doesn't use them yet.
 
 Return {"dismissed": [{"id": "check_id", "reason": "brief reason"}]} or {"dismissed": []} if all apply.`,
       prompt: `Languages: ${fingerprint.languages.join(', ') || 'none'}
 Frameworks: ${fingerprint.frameworks.join(', ') || 'none'}
+Tools: ${fingerprint.tools.join(', ') || 'none'}
+Has build files (package.json, Makefile, etc.): ${hasBuildFiles ? 'yes' : 'no'}
+Top files: ${topFiles}
 
 Failing checks:
 ${JSON.stringify(checkList, null, 2)}`,
-      maxTokens: 200,
+      maxTokens: 300,
       ...(fastModel ? { model: fastModel } : {}),
     });
 
