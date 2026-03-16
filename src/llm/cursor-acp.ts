@@ -65,6 +65,7 @@ export class CursorAcpProvider implements LLMProvider {
       stdio: ['pipe', 'pipe', 'inherit'],
       cwd: process.cwd(),
       env: { ...process.env, ...(this.cursorApiKey && { CURSOR_API_KEY: this.cursorApiKey }) },
+      shell: true,
     });
 
     const pending = new Map<number, PendingCall>();
@@ -193,7 +194,8 @@ export class CursorAcpProvider implements LLMProvider {
 /** Check if Cursor agent CLI is available (e.g. user ran `cursor.com/install` and optionally `agent login`). */
 export function isCursorAgentAvailable(): boolean {
   try {
-    execSync(`which ${ACP_AGENT_BIN}`, { stdio: 'ignore' });
+    const cmd = process.platform === 'win32' ? `where ${ACP_AGENT_BIN}` : `which ${ACP_AGENT_BIN}`;
+    execSync(cmd, { stdio: 'ignore' });
     return true;
   } catch {
     return false;

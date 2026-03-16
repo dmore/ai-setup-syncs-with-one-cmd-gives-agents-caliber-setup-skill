@@ -61,7 +61,7 @@ describe('openDiffsInEditor', () => {
     expect(spawn).toHaveBeenCalledWith(
       'cursor',
       ['--diff', '/project/CLAUDE.md', '/tmp/proposed/CLAUDE.md'],
-      { stdio: 'ignore', detached: true }
+      { stdio: 'ignore', detached: true, shell: true }
     );
     expect(mockUnref).toHaveBeenCalled();
   });
@@ -74,7 +74,7 @@ describe('openDiffsInEditor', () => {
     expect(spawn).toHaveBeenCalledWith(
       'code',
       ['/tmp/proposed/new.md'],
-      { stdio: 'ignore', detached: true }
+      { stdio: 'ignore', detached: true, shell: true }
     );
   });
 

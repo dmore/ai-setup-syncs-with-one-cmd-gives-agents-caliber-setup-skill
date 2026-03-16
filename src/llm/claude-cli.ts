@@ -37,6 +37,7 @@ export class ClaudeCliProvider implements LLMProvider {
       cwd: process.cwd(),
       stdio: ['ignore', 'pipe', 'inherit'],
       env: process.env,
+      shell: true,
     });
 
     let settled = false;
@@ -110,6 +111,7 @@ export class ClaudeCliProvider implements LLMProvider {
         cwd: process.cwd(),
         stdio: ['ignore', 'pipe', 'inherit'],
         env: process.env,
+        shell: true,
       });
 
       const chunks: Buffer[] = [];

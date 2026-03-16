@@ -4,7 +4,8 @@ export type ReviewMethod = 'cursor' | 'vscode' | 'terminal';
 
 function commandExists(cmd: string): boolean {
   try {
-    execSync(`which ${cmd}`, { stdio: 'ignore' });
+    const check = process.platform === 'win32' ? `where ${cmd}` : `which ${cmd}`;
+    execSync(check, { stdio: 'ignore' });
     return true;
   } catch {
     return false;
@@ -31,11 +32,13 @@ export function openDiffsInEditor(
         spawn(cmd, ['--diff', file.originalPath, file.proposedPath], {
           stdio: 'ignore',
           detached: true,
+          shell: true,
         }).unref();
       } else {
         spawn(cmd, [file.proposedPath], {
           stdio: 'ignore',
           detached: true,
+          shell: true,
         }).unref();
       }
     } catch {
