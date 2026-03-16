@@ -28,7 +28,7 @@ import { loadConfig } from '../llm/config.js';
 import { validateModel } from '../llm/index.js';
 
 /** Minimum tool events required before running LLM analysis. */
-const MIN_EVENTS_FOR_ANALYSIS = 50;
+const MIN_EVENTS_FOR_ANALYSIS = 25;
 
 export async function learnObserveCommand(options: { failure?: boolean }) {
   try {
@@ -62,23 +62,33 @@ export async function learnObserveCommand(options: { failure?: boolean }) {
 export async function learnFinalizeCommand(options?: { force?: boolean }) {
   if (!options?.force) {
     const { isCaliberRunning } = await import('../lib/lock.js');
-    if (isCaliberRunning()) return;
+    if (isCaliberRunning()) {
+      console.log(chalk.dim('caliber: skipping finalize — another caliber process is running'));
+      return;
+    }
   }
 
   // Prevent concurrent finalize from parallel sessions
-  if (!acquireFinalizeLock()) return;
+  if (!acquireFinalizeLock()) {
+    console.log(chalk.dim('caliber: skipping finalize — another finalize is in progress'));
+    return;
+  }
 
   let analyzed = false;
   try {
     const config = loadConfig();
     if (!config) {
+      console.log(chalk.yellow('caliber: no LLM provider configured — run `caliber config` first'));
       clearSession();
       resetState();
       return;
     }
 
     const events = readAllEvents();
-    if (events.length < MIN_EVENTS_FOR_ANALYSIS) return;
+    if (events.length < MIN_EVENTS_FOR_ANALYSIS) {
+      console.log(chalk.dim(`caliber: ${events.length}/${MIN_EVENTS_FOR_ANALYSIS} events recorded — need more before analysis`));
+      return;
+    }
 
     await validateModel({ fast: true });
 
@@ -109,8 +119,10 @@ export async function learnFinalizeCommand(options?: { force?: boolean }) {
         }
       }
     }
-  } catch {
-    // Finalize should not fail visibly
+  } catch (err) {
+    if (options?.force) {
+      console.error(chalk.red('caliber: finalize failed —'), err instanceof Error ? err.message : err);
+    }
   } finally {
     if (analyzed) {
       clearSession();

@@ -72,7 +72,15 @@ export function readAllEvents(): ToolEvent[] {
   if (!fs.existsSync(filePath)) return [];
 
   const lines = fs.readFileSync(filePath, 'utf-8').split('\n').filter(Boolean);
-  return lines.map(line => JSON.parse(line) as ToolEvent);
+  const events: ToolEvent[] = [];
+  for (const line of lines) {
+    try {
+      events.push(JSON.parse(line) as ToolEvent);
+    } catch {
+      // Skip corrupt JSONL lines (e.g. truncated by concurrent writes)
+    }
+  }
+  return events;
 }
 
 export function getEventCount(): number {
