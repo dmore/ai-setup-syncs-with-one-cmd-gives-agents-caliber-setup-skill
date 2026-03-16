@@ -216,7 +216,7 @@ describe('scoreAndRefine', () => {
     expect(mockLlmCall).not.toHaveBeenCalled();
   });
 
-  it('calls llmCall when issues are found', async () => {
+  it('calls llmCall with targeted content when issues are found', async () => {
     mockExistsSync.mockImplementation((path: string) => {
       if (typeof path === 'string' && path.includes('nonexistent')) return false;
       return true;
@@ -224,14 +224,16 @@ describe('scoreAndRefine', () => {
 
     const originalSetup = makeSetup('## Files\n\n- `src/nonexistent.ts` bad ref\n- `src/index.ts` good ref\n- `tsconfig.json` good ref\n\n## Commands\n\n## Architecture\n\n## Conventions\n\n```bash\nnpm test\n```\n\n```bash\nnpm build\n```\n\n```bash\nnpm lint\n```');
 
-    const fixedSetup = makeSetup('## Files\n\n- `src/index.ts` good ref\n- `tsconfig.json` good ref\n- `package.json` good ref\n\n## Commands\n\n## Architecture\n\n## Conventions\n\n```bash\nnpm test\n```\n\n```bash\nnpm build\n```\n\n```bash\nnpm lint\n```');
+    const fixedContent = '## Files\n\n- `src/index.ts` good ref\n- `tsconfig.json` good ref\n- `package.json` good ref\n\n## Commands\n\n## Architecture\n\n## Conventions\n\n```bash\nnpm test\n```\n\n```bash\nnpm build\n```\n\n```bash\nnpm lint\n```';
 
-    mockLlmCall.mockResolvedValueOnce(JSON.stringify(fixedSetup));
+    mockLlmCall.mockResolvedValueOnce(fixedContent);
 
     const history: Array<{ role: 'user' | 'assistant'; content: string }> = [];
     const result = await scoreAndRefine(originalSetup, '/project', history);
 
     expect(mockLlmCall).toHaveBeenCalled();
+    const claude = result.claude as Record<string, unknown>;
+    expect(claude.claudeMd).toBe(fixedContent);
     expect(history.length).toBeGreaterThanOrEqual(2);
   });
 
@@ -239,10 +241,10 @@ describe('scoreAndRefine', () => {
     mockExistsSync.mockReturnValue(false);
 
     const originalSetup = makeSetup('## A\n\n## B\n\n## C\n\n- `src/one-bad.ts` ref\n\n```bash\nnpm test\n```\n\n```bash\nnpm build\n```\n\n```bash\nnpm lint\n```');
-    const worseSetup = makeSetup('## A\n\n- `bad1.ts` ref\n- `bad2.ts` ref\n- `bad3.ts` ref');
+    const worseContent = '## A\n\n- `bad1.ts` ref\n- `bad2.ts` ref\n- `bad3.ts` ref';
 
-    mockLlmCall.mockResolvedValueOnce(JSON.stringify(worseSetup));
-    mockLlmCall.mockResolvedValueOnce(JSON.stringify(worseSetup));
+    mockLlmCall.mockResolvedValueOnce(worseContent);
+    mockLlmCall.mockResolvedValueOnce(worseContent);
 
     const history: Array<{ role: 'user' | 'assistant'; content: string }> = [];
     const result = await scoreAndRefine(originalSetup, '/project', history);
@@ -263,10 +265,10 @@ describe('scoreAndRefine', () => {
   it('respects max iteration limit', async () => {
     mockExistsSync.mockReturnValue(false);
 
-    const setup = makeSetup('## A\n\n- `src/fake.ts` ref');
-    const stillBadSetup = makeSetup('## A\n\n- `src/still-fake.ts` ref');
+    const setup = makeSetup('## A\n\n- `src/fake.ts` ref\n\n## B\n\n- Some content here to reach minimum length for validation');
+    const stillBadContent = '## A\n\n- `src/still-fake.ts` ref\n\n## B\n\n- Some content here to reach minimum length for validation';
 
-    mockLlmCall.mockResolvedValue(JSON.stringify(stillBadSetup));
+    mockLlmCall.mockResolvedValue(stillBadContent);
 
     const history: Array<{ role: 'user' | 'assistant'; content: string }> = [];
     await scoreAndRefine(setup, '/project', history);

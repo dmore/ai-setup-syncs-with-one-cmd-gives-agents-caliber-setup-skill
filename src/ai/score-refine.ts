@@ -199,21 +199,14 @@ export async function scoreAndRefine(
       callbacks.onStatus(`Fixing ${issues.length} scoring issue${issues.length === 1 ? '' : 's'}: ${issueNames}...`);
     }
 
-    const feedbackMessage = buildFeedbackMessage(issues);
-    const refined = await refineSetupFast(currentSetup, feedbackMessage);
+    const patched = await applyTargetedFixes(currentSetup, issues, sessionHistory);
 
-    if (!refined) {
+    if (!patched) {
       if (callbacks?.onStatus) callbacks.onStatus('Refinement failed, keeping current setup');
       return bestSetup;
     }
 
-    sessionHistory.push({ role: 'user', content: feedbackMessage });
-    sessionHistory.push({
-      role: 'assistant',
-      content: `Applied scoring fixes for: ${issues.map(i => i.check).join(', ')}`,
-    });
-
-    currentSetup = refined;
+    currentSetup = patched;
   }
 
   // Final check after last iteration
@@ -226,23 +219,51 @@ export async function scoreAndRefine(
   return bestSetup;
 }
 
-async function refineSetupFast(
+async function applyTargetedFixes(
   setup: Record<string, unknown>,
-  feedbackMessage: string,
+  issues: ScoringIssue[],
+  sessionHistory: Array<{ role: 'user' | 'assistant'; content: string }>,
 ): Promise<Record<string, unknown> | null> {
-  const prompt = `Current setup:\n${JSON.stringify(setup, null, 2)}\n\n${feedbackMessage}\n\nReturn the complete updated AgentSetup JSON with only these fixes applied. Respond with ONLY the JSON.`;
+  const { claudeMd, agentsMd } = extractConfigContent(setup);
+  const content = claudeMd ?? agentsMd;
+  if (!content) return null;
+
+  const feedbackMessage = buildFeedbackMessage(issues);
+  const contentLabel = claudeMd ? 'CLAUDE.md' : 'AGENTS.md';
+
+  const prompt = [
+    `Here is the current ${contentLabel} content:\n`,
+    '```markdown',
+    content,
+    '```\n',
+    feedbackMessage,
+    `\nReturn ONLY the fixed ${contentLabel} content as raw markdown (no JSON, no code fences). Apply the fixes above and nothing else — do not rewrite, restructure, or make cosmetic changes.`,
+  ].join('\n');
 
   try {
     const raw = await llmCall({
-      system: 'You fix scoring issues in AI agent configuration files. Return only the corrected JSON — no explanations, no code fences.',
+      system: `You fix scoring issues in AI agent configuration files. Return only the fixed markdown content — no explanations, no JSON wrappers, no code fences.`,
       prompt,
-      maxTokens: 16000,
+      maxTokens: 8000,
     });
 
-    const cleaned = stripMarkdownFences(raw);
-    const jsonStart = cleaned.indexOf('{');
-    const jsonToParse = jsonStart !== -1 ? cleaned.slice(jsonStart) : cleaned;
-    return JSON.parse(jsonToParse);
+    const fixed = stripMarkdownFences(raw).trim();
+    if (!fixed || fixed.length < 50) return null;
+
+    const patched = JSON.parse(JSON.stringify(setup)) as Record<string, unknown>;
+    if (claudeMd) {
+      (patched.claude as Record<string, unknown>).claudeMd = fixed;
+    } else {
+      (patched.codex as Record<string, unknown>).agentsMd = fixed;
+    }
+
+    sessionHistory.push({ role: 'user', content: feedbackMessage });
+    sessionHistory.push({
+      role: 'assistant',
+      content: `Applied scoring fixes for: ${issues.map(i => i.check).join(', ')}`,
+    });
+
+    return patched;
   } catch {
     return null;
   }
