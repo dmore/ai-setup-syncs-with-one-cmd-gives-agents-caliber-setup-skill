@@ -81,12 +81,12 @@ describe('getInstalledSkills', () => {
   it('only checks directories for the specified platforms', () => {
     const mockDirent = (name: string) => ({ name, isDirectory: () => true } as fs.Dirent);
 
-    vi.mocked(fs.readdirSync).mockImplementation((dir) => {
+    (vi.mocked(fs.readdirSync) as unknown as ReturnType<typeof vi.fn>).mockImplementation((dir: string) => {
       const d = dir.toString();
-      if (d.includes('.claude')) return [mockDirent('skill-a')] as unknown as fs.Dirent[];
-      if (d.includes('.cursor')) return [mockDirent('skill-b')] as unknown as fs.Dirent[];
-      if (d.includes('.agents')) return [mockDirent('skill-c')] as unknown as fs.Dirent[];
-      return [] as unknown as fs.Dirent[];
+      if (d.includes('.claude')) return [mockDirent('skill-a')];
+      if (d.includes('.cursor')) return [mockDirent('skill-b')];
+      if (d.includes('.agents')) return [mockDirent('skill-c')];
+      return [];
     });
 
     const claudeOnly = getInstalledSkills(['claude']);
@@ -98,11 +98,11 @@ describe('getInstalledSkills', () => {
   it('checks multiple platform directories when multiple are specified', () => {
     const mockDirent = (name: string) => ({ name, isDirectory: () => true } as fs.Dirent);
 
-    vi.mocked(fs.readdirSync).mockImplementation((dir) => {
+    (vi.mocked(fs.readdirSync) as unknown as ReturnType<typeof vi.fn>).mockImplementation((dir: string) => {
       const d = dir.toString();
-      if (d.includes('.claude')) return [mockDirent('skill-a')] as unknown as fs.Dirent[];
-      if (d.includes('.cursor')) return [mockDirent('skill-b')] as unknown as fs.Dirent[];
-      return [] as unknown as fs.Dirent[];
+      if (d.includes('.claude')) return [mockDirent('skill-a')];
+      if (d.includes('.cursor')) return [mockDirent('skill-b')];
+      return [];
     });
 
     const both = getInstalledSkills(['claude', 'cursor']);
@@ -122,7 +122,7 @@ describe('getInstalledSkills', () => {
     const mockFile = { name: 'README.md', isDirectory: () => false } as fs.Dirent;
     const mockDir = { name: 'real-skill', isDirectory: () => true } as fs.Dirent;
 
-    vi.mocked(fs.readdirSync).mockReturnValue([mockFile, mockDir] as unknown as fs.Dirent[]);
+    (vi.mocked(fs.readdirSync) as unknown as ReturnType<typeof vi.fn>).mockReturnValue([mockFile, mockDir]);
 
     const result = getInstalledSkills(['claude']);
     expect(result).toEqual(new Set(['real-skill']));
