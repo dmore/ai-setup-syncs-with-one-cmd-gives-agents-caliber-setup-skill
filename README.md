@@ -107,7 +107,7 @@ Every change Caliber makes is reversible:
 
 | Command              | Description                                          |
 | -------------------- | ---------------------------------------------------- |
-| `caliber init`       | 🏁 Initialize your project — full 6-step wizard      |
+| `caliber init`       | 🏁 Initialize your project — full 5-step wizard      |
 | `caliber score`      | 📊 Score your config quality (deterministic, no LLM) |
 | `caliber skills`     | 🧩 Discover and install community skills             |
 | `caliber regenerate` | 🔄 Re-analyze and regenerate your setup              |
