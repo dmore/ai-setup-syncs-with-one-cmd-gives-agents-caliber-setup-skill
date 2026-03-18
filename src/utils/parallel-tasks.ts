@@ -8,6 +8,8 @@ interface TaskState {
   status: TaskStatus;
   message: string;
   depth: number;
+  pipelineLabel?: string;
+  pipelineRow: 0 | 1;
   startTime?: number;
   endTime?: number;
 }
@@ -34,10 +36,18 @@ export class ParallelTaskDisplay {
   private cachedCardLines: string[] | null = null;
   private cachedCardIndex = -1;
   private cachedCardCols = -1;
+  private cachedConnectors: string[] | null = null;
 
-  add(name: string, options?: { depth?: number }): number {
+  add(name: string, options?: { depth?: number; pipelineLabel?: string; pipelineRow?: 0 | 1 }): number {
     const index = this.tasks.length;
-    this.tasks.push({ name, status: 'pending', message: '', depth: options?.depth ?? 0 });
+    this.tasks.push({
+      name,
+      status: 'pending',
+      message: '',
+      depth: options?.depth ?? 0,
+      pipelineLabel: options?.pipelineLabel,
+      pipelineRow: options?.pipelineRow ?? 0,
+    });
     return index;
   }
 
@@ -163,7 +173,76 @@ export class ParallelTaskDisplay {
     return text.slice(0, boundary) + '…';
   }
 
-  private renderLine(task: TaskState): string {
+  private statusIcon(task: TaskState): { char: string; styled: string } {
+    switch (task.status) {
+      case 'pending': return { char: '○', styled: chalk.dim('○') };
+      case 'running': {
+        const frame = SPINNER_FRAMES[this.spinnerFrame];
+        return { char: frame, styled: chalk.cyan(frame) };
+      }
+      case 'done': return { char: '✓', styled: chalk.green('✓') };
+      case 'failed': return { char: '✗', styled: chalk.red('✗') };
+    }
+  }
+
+  private renderPipelineHeader(): string[] {
+    const mainTasks = this.tasks.filter(t => t.pipelineLabel && t.pipelineRow === 0);
+    const branchTasks = this.tasks.filter(t => t.pipelineLabel && t.pipelineRow === 1);
+    if (mainTasks.length === 0) return [];
+
+    const arrow = ' → ';
+    const styledArrow = chalk.dim(arrow);
+
+    const renderNode = (t: TaskState): { plain: string; styled: string } => {
+      const { char, styled: icon } = this.statusIcon(t);
+      const label = t.pipelineLabel!;
+      const styledLabel = t.status === 'pending' ? chalk.dim(label) : label;
+      return {
+        plain: `[${char} ${label}]`,
+        styled: chalk.dim('[') + icon + ' ' + styledLabel + chalk.dim(']'),
+      };
+    };
+
+    const mainNodes = mainTasks.map(renderNode);
+    const mainLine = PREFIX + mainNodes.map(n => n.styled).join(styledArrow);
+    const lines = [mainLine];
+
+    if (branchTasks.length > 0) {
+      const firstNodePlainWidth = mainNodes[0].plain.length;
+      const indent = ' '.repeat(PREFIX.length + firstNodePlainWidth + arrow.length);
+      const branchNodes = branchTasks.map(renderNode);
+      const branchLine = indent + chalk.dim('↘ ') + branchNodes.map(n => n.styled).join(styledArrow) + chalk.dim(' ↗');
+      lines.push(branchLine);
+    }
+
+    return lines;
+  }
+
+  private hasSiblingAfter(startIdx: number, depth: number): boolean {
+    for (let i = startIdx; i < this.tasks.length; i++) {
+      if (this.tasks[i].depth < depth) return false;
+      if (this.tasks[i].depth === depth) return true;
+    }
+    return false;
+  }
+
+  private getTreeConnector(index: number): string {
+    const task = this.tasks[index];
+    if (task.depth === 0) return '';
+
+    if (task.depth === 1) {
+      return this.hasSiblingAfter(index + 1, 1) ? '├─ ' : '└─ ';
+    }
+
+    if (task.depth === 2) {
+      const pipe = this.hasSiblingAfter(index + 1, 1) ? '│' : ' ';
+      return `${pipe}  └─ `;
+    }
+
+    return '  '.repeat(task.depth);
+  }
+
+  private renderLine(task: TaskState, index: number): string {
     const cols = process.stdout.columns || 80;
     const elapsed = task.startTime
       ? this.formatTime((task.endTime ?? Date.now()) - task.startTime)
@@ -171,41 +250,21 @@ export class ParallelTaskDisplay {
     const timeStr = elapsed ? ` ${chalk.dim(elapsed)}` : '';
     const timePlain = elapsed ? ` ${elapsed}` : '';
 
-    let icon: string;
-    let nameStyle: (s: string) => string;
-    let msgStyle: (s: string) => string;
+    const { styled: icon } = this.statusIcon(task);
+    const nameStyle = task.status === 'pending' ? chalk.dim : chalk.white;
+    const msgStyle = task.status === 'failed' ? chalk.red : chalk.dim;
 
-    switch (task.status) {
-      case 'pending':
-        icon = chalk.dim('○');
-        nameStyle = chalk.dim;
-        msgStyle = chalk.dim;
-        break;
-      case 'running':
-        icon = chalk.cyan(SPINNER_FRAMES[this.spinnerFrame]);
-        nameStyle = chalk.white;
-        msgStyle = chalk.dim;
-        break;
-      case 'done':
-        icon = chalk.green('✓');
-        nameStyle = chalk.white;
-        msgStyle = chalk.dim;
-        break;
-      case 'failed':
-        icon = chalk.red('✗');
-        nameStyle = chalk.white;
-        msgStyle = chalk.red;
-        break;
+    if (!this.cachedConnectors) {
+      this.cachedConnectors = this.tasks.map((_, i) => this.getTreeConnector(i));
     }
-
-    const indent = '  '.repeat(task.depth);
-    const paddedName = task.name.padEnd(Math.max(0, NAME_COL_WIDTH - indent.length));
-    // icon(1) + space(1) + indent + name(padded) + time
-    const usedByFixed = PREFIX.length + indent.length + 2 + NAME_COL_WIDTH + timePlain.length;
+    const connector = this.cachedConnectors[index];
+    const connectorStyled = connector ? chalk.dim(connector) : '';
+    const paddedName = task.name.padEnd(Math.max(0, NAME_COL_WIDTH - connector.length));
+    const usedByFixed = PREFIX.length + connector.length + 2 + NAME_COL_WIDTH + timePlain.length;
     const msgMax = Math.max(cols - usedByFixed - 2, 10);
     const msg = task.message ? this.smartTruncate(task.message, msgMax) : '';
 
-    return `${PREFIX}${indent}${icon} ${nameStyle(paddedName)}${msg ? msgStyle(msg) : ''}${timeStr}`;
+    return `${PREFIX}${connectorStyled}${icon} ${nameStyle(paddedName)}${msg ? msgStyle(msg) : ''}${timeStr}`;
   }
 
   private draw(initial: boolean): void {
@@ -215,7 +274,16 @@ export class ParallelTaskDisplay {
     }
     stdout.write('\x1b[0J');
 
-    const lines = this.tasks.map(t => this.renderLine(t));
+    const pipelineHeader = this.renderPipelineHeader();
+    const taskLines = this.tasks.map((t, i) => this.renderLine(t, i));
+
+    const lines: string[] = [];
+    if (pipelineHeader.length > 0) {
+      lines.push(...pipelineHeader);
+      const cols = stdout.columns || 80;
+      lines.push(PREFIX + chalk.dim('─'.repeat(Math.min(cols - PREFIX.length * 2, 55))));
+    }
+    lines.push(...taskLines);
 
     if (this.waitingEnabled && this.waitingCards.length > 0 && stdout.isTTY) {
       const cols = stdout.columns || 80;

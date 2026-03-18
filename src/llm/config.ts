@@ -14,6 +14,33 @@ export const DEFAULT_MODELS: Record<ProviderType, string> = {
   'claude-cli': 'default',
 };
 
+export const MODEL_CONTEXT_WINDOWS: Record<string, number> = {
+  'claude-sonnet-4-6': 200_000,
+  'claude-opus-4-6': 200_000,
+  'claude-haiku-4-5-20251001': 200_000,
+  'claude-sonnet-4-5-20250514': 200_000,
+  'gpt-4.1': 1_000_000,
+  'gpt-4.1-mini': 1_000_000,
+  'gpt-4o': 128_000,
+  'gpt-4o-mini': 128_000,
+  'sonnet-4.6': 200_000,
+};
+
+const DEFAULT_CONTEXT_WINDOW = 200_000;
+const INPUT_BUDGET_FRACTION = 0.6;
+const MAX_PROMPT_TOKENS_CAP = 300_000;
+const MIN_PROMPT_TOKENS = 30_000;
+
+export function getMaxPromptTokens(): number {
+  const config = loadConfig();
+  const model = process.env.CALIBER_MODEL || config?.model;
+  const contextWindow = model
+    ? (MODEL_CONTEXT_WINDOWS[model] ?? DEFAULT_CONTEXT_WINDOW)
+    : DEFAULT_CONTEXT_WINDOW;
+  const budget = Math.floor(contextWindow * INPUT_BUDGET_FRACTION);
+  return Math.max(MIN_PROMPT_TOKENS, Math.min(budget, MAX_PROMPT_TOKENS_CAP));
+}
+
 export const DEFAULT_FAST_MODELS: Partial<Record<ProviderType, string>> = {
   anthropic: 'claude-haiku-4-5-20251001',
   vertex: 'claude-haiku-4-5-20251001',

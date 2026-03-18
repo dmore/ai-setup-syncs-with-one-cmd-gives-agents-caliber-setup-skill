@@ -7,6 +7,7 @@ import { readExistingConfigs } from './existing-config.js';
 import { analyzeCode, CodeAnalysis } from './code-analysis.js';
 import { detectProjectStack } from '../ai/detect.js';
 import { loadConfig } from '../llm/config.js';
+import { loadFingerprintCache, saveFingerprintCache } from './cache.js';
 
 export type { CodeAnalysis };
 
@@ -26,9 +27,23 @@ export async function collectFingerprint(dir: string): Promise<Fingerprint> {
   const gitRemoteUrl = getGitRemoteUrl();
   const fileTree = getFileTree(dir);
   const existingConfigs = readExistingConfigs(dir);
-  const codeAnalysis = analyzeCode(dir);
   const packageName = readPackageName(dir);
 
+  const cached = loadFingerprintCache(dir, fileTree);
+  if (cached) {
+    return {
+      gitRemoteUrl,
+      packageName,
+      languages: cached.languages,
+      frameworks: cached.frameworks,
+      tools: cached.tools,
+      fileTree,
+      existingConfigs,
+      codeAnalysis: cached.codeAnalysis,
+    };
+  }
+
+  const codeAnalysis = analyzeCode(dir);
   const fingerprint: Fingerprint = {
     gitRemoteUrl,
     packageName,
@@ -41,6 +56,15 @@ export async function collectFingerprint(dir: string): Promise<Fingerprint> {
   };
 
   await enrichWithLLM(fingerprint);
+
+  saveFingerprintCache(
+    dir,
+    fileTree,
+    codeAnalysis,
+    fingerprint.languages,
+    fingerprint.frameworks,
+    fingerprint.tools,
+  );
 
   return fingerprint;
 }
