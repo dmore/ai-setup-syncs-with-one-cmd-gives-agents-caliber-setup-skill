@@ -1,3 +1,20 @@
+## v1.23.0 (2026-03-18)
+
+### Features
+
+- **llm**: cursor provider v2 + cross-provider hardening
+- **fingerprint**: cache code analysis and LLM enrichment between runs
+- **llm**: model-adaptive context budgets for prompt sizing
+- **init**: pipeline flow UI with tree connectors and parallel header
+
+### Bug Fixes
+
+- **init**: show smart sampling message for large repos (>5K files)
+
+### Refactoring
+
+- **generate**: extract shared streaming logic and fix O(n²) hot paths
+
 ## v1.22.1 (2026-03-17)
 
 ### Bug Fixes
