@@ -12,6 +12,10 @@ vi.mock('../code-analysis.js', () => ({
 vi.mock('../../ai/detect.js', () => ({
   detectProjectStack: vi.fn().mockResolvedValue({ languages: [], frameworks: [], tools: [] }),
 }));
+vi.mock('../cache.js', () => ({
+  loadFingerprintCache: () => null,
+  saveFingerprintCache: () => {},
+}));
 
 describe('computeFingerprintHash', () => {
   const baseFingerprint: Fingerprint = {
