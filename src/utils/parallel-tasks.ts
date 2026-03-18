@@ -39,6 +39,7 @@ export class ParallelTaskDisplay {
   private cachedConnectors: string[] | null = null;
 
   private previewLines: string[] = [];
+  private previewUpdatedAt = 0;
 
   add(name: string, options?: { depth?: number; pipelineLabel?: string; pipelineRow?: 0 | 1 }): number {
     const index = this.tasks.length;
@@ -118,6 +119,7 @@ export class ParallelTaskDisplay {
 
   setPreviewContent(lines: string[]): void {
     this.previewLines = lines;
+    if (lines.length > 0) this.previewUpdatedAt = Date.now();
   }
 
   stop(): void {
@@ -291,7 +293,10 @@ export class ParallelTaskDisplay {
     }
     lines.push(...taskLines);
 
-    if (this.previewLines.length > 0 && stdout.isTTY) {
+    const PREVIEW_STALE_MS = 3_000;
+    const previewFresh = this.previewLines.length > 0 && (Date.now() - this.previewUpdatedAt) < PREVIEW_STALE_MS;
+
+    if (previewFresh && stdout.isTTY) {
       const cols = stdout.columns || 80;
       const maxHeight = Math.min(Math.floor((stdout.rows || 24) / 3), 10);
       const visibleLines = this.previewLines.slice(-maxHeight);

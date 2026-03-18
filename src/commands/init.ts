@@ -243,10 +243,6 @@ export async function initCommand(options: InitOptions) {
     trackInitProjectDiscovered(fingerprint.languages.length, fingerprint.frameworks.length, fingerprint.fileTree.length);
     log(options.verbose, `Fingerprint: ${fingerprint.languages.length} languages, ${fingerprint.frameworks.length} frameworks, ${fingerprint.fileTree.length} files`);
 
-    // Project understanding preview
-    const preview = formatProjectPreview(fingerprint);
-    display.setPreviewContent([`  ${chalk.green('✓')} ${preview}`]);
-
     if (report) {
       report.addJson('Fingerprint: Git', { remote: fingerprint.gitRemoteUrl, packageName: fingerprint.packageName });
       report.addCodeBlock('Fingerprint: File Tree', fingerprint.fileTree.join('\n'));
