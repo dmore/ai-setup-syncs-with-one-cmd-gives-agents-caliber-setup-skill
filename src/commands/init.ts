@@ -226,11 +226,11 @@ export async function initCommand(options: InitOptions) {
   let fingerprint!: Fingerprint;
 
   const display = new ParallelTaskDisplay();
-  const TASK_STACK = display.add('Detecting project stack');
-  const TASK_CONFIG = display.add('Generating configs');
-  const TASK_SKILLS_GEN = display.add('Generating skills', { depth: 1 });
-  const TASK_SKILLS_SEARCH = wantsSkills ? display.add('Searching community skills') : -1;
-  const TASK_SCORE_REFINE = display.add('Validating & refining setup');
+  const TASK_STACK = display.add('Detecting project stack', { pipelineLabel: 'Scan' });
+  const TASK_CONFIG = display.add('Generating configs', { depth: 1, pipelineLabel: 'Generate' });
+  const TASK_SKILLS_GEN = display.add('Generating skills', { depth: 2, pipelineLabel: 'Skills' });
+  const TASK_SKILLS_SEARCH = wantsSkills ? display.add('Searching community skills', { depth: 1, pipelineLabel: 'Search', pipelineRow: 1 }) : -1;
+  const TASK_SCORE_REFINE = display.add('Validating & refining setup', { pipelineLabel: 'Validate' });
   display.start();
   display.enableWaitingContent();
 
@@ -272,7 +272,8 @@ export async function initCommand(options: InitOptions) {
 
     const generatePromise = (async () => {
       // Evaluate dismissals (shown as config status, non-fatal)
-      const failingForDismissal = baselineScore.checks.filter(c => !c.passed && c.maxPoints > 0);
+      let localBaseline = baselineScore;
+      const failingForDismissal = localBaseline.checks.filter(c => !c.passed && c.maxPoints > 0);
       if (failingForDismissal.length > 0) {
         display.update(TASK_CONFIG, 'running', 'Evaluating baseline checks...');
         try {
@@ -282,7 +283,7 @@ export async function initCommand(options: InitOptions) {
             const existingIds = new Set(existing.map(d => d.id));
             const merged = [...existing, ...newDismissals.filter(d => !existingIds.has(d.id))];
             writeDismissedChecks(merged);
-            baselineScore = computeLocalScore(process.cwd(), targetAgent);
+            localBaseline = computeLocalScore(process.cwd(), targetAgent);
           }
         } catch {
           display.update(TASK_CONFIG, 'running', 'Skipped dismissal evaluation');
@@ -294,15 +295,15 @@ export async function initCommand(options: InitOptions) {
       let passingChecks: PassingCheck[] | undefined;
       let currentScore: number | undefined;
 
-      if (hasExistingConfig && baselineScore.score >= 95 && !options.force) {
-        const currentLlmFixable = baselineScore.checks
+      if (hasExistingConfig && localBaseline.score >= 95 && !options.force) {
+        const currentLlmFixable = localBaseline.checks
           .filter(c => !c.passed && c.maxPoints > 0 && !NON_LLM_CHECKS.has(c.id));
         failingChecks = currentLlmFixable
           .map(c => ({ name: c.name, suggestion: c.suggestion, fix: c.fix }));
-        passingChecks = baselineScore.checks
+        passingChecks = localBaseline.checks
           .filter(c => c.passed)
           .map(c => ({ name: c.name }));
-        currentScore = baselineScore.score;
+        currentScore = localBaseline.score;
       }
 
       if (report) {
