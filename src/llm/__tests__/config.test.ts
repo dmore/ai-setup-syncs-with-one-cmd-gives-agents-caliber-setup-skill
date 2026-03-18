@@ -5,7 +5,7 @@ import path from 'path';
 vi.mock('fs');
 vi.mock('os', () => ({ default: { homedir: () => '/home/user' } }));
 
-import { loadConfig, resolveFromEnv, readConfigFile, writeConfigFile, DEFAULT_MODELS, DEFAULT_FAST_MODELS, getFastModel } from '../config.js';
+import { loadConfig, resolveFromEnv, readConfigFile, writeConfigFile, DEFAULT_MODELS, DEFAULT_FAST_MODELS, getFastModel, getMaxPromptTokens, MODEL_CONTEXT_WINDOWS } from '../config.js';
 
 const CONFIG_DIR = path.join('/home/user', '.caliber');
 
@@ -376,6 +376,56 @@ describe('config', () => {
       expect(DEFAULT_FAST_MODELS.openai).toBe('gpt-4.1-mini');
       expect(DEFAULT_FAST_MODELS.cursor).toBe('gpt-5.3-codex-fast');
       expect(DEFAULT_FAST_MODELS['claude-cli']).toBeUndefined();
+    });
+  });
+
+  describe('getMaxPromptTokens', () => {
+    it('returns 120K for default Anthropic model (200K context * 0.6)', () => {
+      process.env.ANTHROPIC_API_KEY = 'test-key';
+      vi.mocked(fs.existsSync).mockReturnValue(false);
+      expect(getMaxPromptTokens()).toBe(120_000);
+    });
+
+    it('returns higher budget for GPT-4.1 (1M context)', () => {
+      process.env.OPENAI_API_KEY = 'test-key';
+      vi.mocked(fs.existsSync).mockReturnValue(false);
+      const budget = getMaxPromptTokens();
+      expect(budget).toBe(300_000);
+    });
+
+    it('respects CALIBER_MODEL env var override', () => {
+      process.env.CALIBER_MODEL = 'gpt-4o';
+      process.env.ANTHROPIC_API_KEY = 'test-key';
+      vi.mocked(fs.existsSync).mockReturnValue(false);
+      // gpt-4o has 128K context → 128K * 0.6 = 76.8K
+      expect(getMaxPromptTokens()).toBe(76_800);
+    });
+
+    it('falls back to default context window for unknown model', () => {
+      process.env.CALIBER_MODEL = 'some-future-model';
+      process.env.ANTHROPIC_API_KEY = 'test-key';
+      vi.mocked(fs.existsSync).mockReturnValue(false);
+      // Unknown model → 200K default → 120K
+      expect(getMaxPromptTokens()).toBe(120_000);
+    });
+
+    it('never returns below MIN_PROMPT_TOKENS', () => {
+      vi.mocked(fs.existsSync).mockReturnValue(false);
+      const budget = getMaxPromptTokens();
+      expect(budget).toBeGreaterThanOrEqual(30_000);
+    });
+
+    it('caps at MAX_PROMPT_TOKENS_CAP', () => {
+      vi.mocked(fs.existsSync).mockReturnValue(false);
+      const budget = getMaxPromptTokens();
+      expect(budget).toBeLessThanOrEqual(300_000);
+    });
+
+    it('has context windows for all default models', () => {
+      for (const model of Object.values(DEFAULT_MODELS)) {
+        if (model === 'default') continue;
+        expect(MODEL_CONTEXT_WINDOWS[model]).toBeDefined();
+      }
     });
   });
 });
