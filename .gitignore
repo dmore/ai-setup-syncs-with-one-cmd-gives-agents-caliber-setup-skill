@@ -11,7 +11,7 @@ npm-debug.log*
 
 # Caliber local state
 .caliber/
-.cursor/
+
 *.pdf
 
 # roro workspace
