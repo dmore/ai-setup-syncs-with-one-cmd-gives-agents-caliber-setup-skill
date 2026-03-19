@@ -1,3 +1,13 @@
+## v1.26.0 (2026-03-19)
+
+### Features
+
+- add prompt-driven skill suggestion and learning capture
+
+### Bug Fixes
+
+- write builtin skills during init via writeSetup()
+
 ## v1.25.1 (2026-03-19)
 
 ### Bug Fixes
