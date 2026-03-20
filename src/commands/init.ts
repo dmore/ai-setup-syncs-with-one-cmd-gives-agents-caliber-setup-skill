@@ -2,6 +2,7 @@ import path from 'path';
 import chalk from 'chalk';
 import fs from 'fs';
 import { collectFingerprint, type Fingerprint } from '../fingerprint/index.js';
+import { detectPlatforms } from '../scanner/index.js';
 import { resolveAllSources } from '../fingerprint/sources.js';
 import { getDetectedWorkspaces } from '../fingerprint/cache.js';
 import { generateSetup, generateSkillsForSetup } from '../ai/generate.js';
@@ -86,6 +87,12 @@ export async function initCommand(options: InitOptions) {
     console.log(chalk.dim('  4. Finalize   Score check and auto-sync hooks\n'));
   } else {
     console.log(brand.bold('\n  CALIBER') + chalk.dim('  — regenerating config\n'));
+  }
+
+  const platforms = detectPlatforms();
+  if (!platforms.claude && !platforms.cursor && !platforms.codex) {
+    console.log(chalk.yellow('  ⚠ No supported AI platforms detected (Claude, Cursor, Codex).'));
+    console.log(chalk.yellow('    Caliber will still generate config files, but they won\'t be auto-installed.\n'));
   }
 
   const report = options.debugReport ? new DebugReport() : null;

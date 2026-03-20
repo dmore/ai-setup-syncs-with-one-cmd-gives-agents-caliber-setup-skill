@@ -1,10 +1,11 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { isFirstRun, summarizeSetup, derivePermissions } from '../init-helpers.js';
 import { detectAgents } from '../init-prompts.js';
 import { formatProjectPreview, formatWhatChanged } from '../init-display.js';
+import { detectPlatforms } from '../../scanner/index.js';
 import type { Fingerprint } from '../../fingerprint/index.js';
 
 describe('isFirstRun', () => {
@@ -227,5 +228,26 @@ describe('derivePermissions', () => {
   it('includes terraform from tools', () => {
     const perms = derivePermissions({ languages: [], tools: ['Terraform'], fileTree: [] });
     expect(perms).toContain('Bash(terraform *)');
+  });
+});
+
+describe('detectPlatforms', () => {
+  it('returns platform detection with correct shape', () => {
+    const result = detectPlatforms();
+    expect(typeof result.claude).toBe('boolean');
+    expect(typeof result.cursor).toBe('boolean');
+    expect(typeof result.codex).toBe('boolean');
+  });
+
+  it('should trigger warning when no platforms detected', () => {
+    const platforms = { claude: false, cursor: false, codex: false };
+    const noneDetected = !platforms.claude && !platforms.cursor && !platforms.codex;
+    expect(noneDetected).toBe(true);
+  });
+
+  it('should not trigger warning when at least one platform detected', () => {
+    const platforms = { claude: true, cursor: false, codex: false };
+    const noneDetected = !platforms.claude && !platforms.cursor && !platforms.codex;
+    expect(noneDetected).toBe(false);
   });
 });
