@@ -1,3 +1,14 @@
+## v1.26.1 (2026-03-20)
+
+### Bug Fixes
+
+- skill backup paths don't match actual written paths
+- surface scanner warnings instead of silently swallowing errors (fixes #38)
+
+### Refactoring
+
+- replace require() with ESM import in writers/index.ts
+
 ## v1.26.0 (2026-03-19)
 
 ### Features
