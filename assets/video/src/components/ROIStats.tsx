@@ -1,53 +1,32 @@
-import { AbsoluteFill, useCurrentFrame, interpolate, spring, useVideoConfig } from "remotion";
+import { AbsoluteFill, useCurrentFrame, interpolate } from "remotion";
+import { Logo } from "./Logo";
 import { theme } from "./theme";
 
 const stats = [
-  {
-    value: "20x",
-    label: "Fewer tokens wasted",
-    desc: "Grounded configs = focused agents",
-    color: theme.brand3,
-  },
-  {
-    value: "10x",
-    label: "Faster onboarding",
-    desc: "New devs get full AI setup instantly",
-    color: theme.accent,
-  },
-  {
-    value: "4",
-    label: "Platforms synced",
-    desc: "Claude · Cursor · Codex · Copilot",
-    color: theme.green,
-  },
-  {
-    value: "0",
-    label: "Config drift",
-    desc: "Continuous sync keeps everything aligned",
-    color: theme.brand1,
-  },
+  { value: "20x", label: "Fewer tokens", desc: "Grounded configs = focused agents", color: theme.brand3 },
+  { value: "10x", label: "Faster velocity", desc: "Best practices built in from day one", color: theme.accent },
+  { value: "4", label: "Platforms", desc: "Claude · Cursor · Codex · Copilot", color: theme.green },
+  { value: "0", label: "Config drift", desc: "Continuous sync keeps it all aligned", color: theme.brand1 },
 ];
 
 export const ROIStats: React.FC = () => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
 
-  const headerOpacity = interpolate(frame, [0, 10], [0, 1], { extrapolateRight: "clamp" });
+  const headerOpacity = interpolate(frame, [0, 14], [0, 1], { extrapolateRight: "clamp" });
+  const ctaOpacity = interpolate(frame, [45, 60], [0, 1], { extrapolateRight: "clamp" });
 
   return (
     <AbsoluteFill
       style={{
         justifyContent: "center",
         alignItems: "center",
-        background: `radial-gradient(ellipse 60% 50% at 50% 50%, ${theme.brand3}06, transparent)`,
       }}
     >
-      {/* Section label */}
       <div
         style={{
           position: "absolute",
-          top: "10%",
-          fontSize: 18,
+          top: "5%",
+          fontSize: 32,
           fontFamily: theme.fontMono,
           color: theme.textMuted,
           textTransform: "uppercase",
@@ -58,12 +37,11 @@ export const ROIStats: React.FC = () => {
         The Impact
       </div>
 
-      {/* Headline */}
       <div
         style={{
           position: "absolute",
-          top: "17%",
-          fontSize: 38,
+          top: "12%",
+          fontSize: 64,
           fontWeight: 700,
           fontFamily: theme.fontSans,
           color: theme.text,
@@ -71,28 +49,22 @@ export const ROIStats: React.FC = () => {
           letterSpacing: "-0.02em",
         }}
       >
-        Why teams use Caliber
+        Maximum velocity. Minimum cost.
       </div>
 
-      {/* Stats grid */}
-      <div
-        style={{
-          display: "flex",
-          gap: 20,
-          marginTop: 40,
-        }}
-      >
+      <div style={{ display: "flex", gap: 32, marginTop: 14 }}>
         {stats.map((stat, i) => {
           const delay = 6 + i * 5;
-          const s = spring({ frame: frame - delay, fps, config: { damping: 14, stiffness: 80 } });
-
-          // Counter animation for the number
-          const counterProgress = spring({
-            frame: frame - delay - 2,
-            fps,
-            config: { damping: 20, mass: 0.5 },
+          const opacity = interpolate(frame, [delay, delay + 10], [0, 1], {
+            extrapolateLeft: "clamp",
+            extrapolateRight: "clamp",
           });
 
+          // Simple linear counter
+          const counterProgress = interpolate(frame, [delay + 4, delay + 20], [0, 1], {
+            extrapolateLeft: "clamp",
+            extrapolateRight: "clamp",
+          });
           const numericValue = parseInt(stat.value, 10);
           const isMultiplier = stat.value.includes("x");
           const displayNum = isNaN(numericValue) ? stat.value : Math.round(numericValue * counterProgress);
@@ -105,65 +77,56 @@ export const ROIStats: React.FC = () => {
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
-                padding: "28px 24px",
+                padding: "44px 40px",
                 backgroundColor: theme.surface,
                 border: `1px solid ${theme.surfaceBorder}`,
-                borderRadius: theme.radiusLg,
-                minWidth: 200,
-                opacity: s,
-                transform: `translateY(${interpolate(s, [0, 1], [20, 0])}px)`,
+                borderRadius: 20,
+                minWidth: 300,
+                opacity,
               }}
             >
-              {/* Accent line */}
               <div
                 style={{
-                  width: 32,
-                  height: 3,
-                  borderRadius: 2,
+                  width: 52,
+                  height: 5,
+                  borderRadius: 3,
                   backgroundColor: stat.color,
-                  marginBottom: 16,
-                  boxShadow: `0 0 12px ${stat.color}40`,
+                  marginBottom: 24,
                 }}
               />
-
-              {/* Big number */}
               <div
                 style={{
-                  fontSize: 56,
+                  fontSize: 96,
                   fontWeight: 800,
                   fontFamily: theme.fontSans,
                   color: stat.color,
                   letterSpacing: "-0.03em",
                   fontVariantNumeric: "tabular-nums",
                   lineHeight: 1,
-                  marginBottom: 8,
+                  marginBottom: 14,
                 }}
               >
                 {displayValue}
               </div>
-
-              {/* Label */}
               <div
                 style={{
-                  fontSize: 19,
+                  fontSize: 32,
                   fontWeight: 600,
                   fontFamily: theme.fontSans,
                   color: theme.text,
-                  marginBottom: 6,
+                  marginBottom: 10,
                   textAlign: "center",
                 }}
               >
                 {stat.label}
               </div>
-
-              {/* Description */}
               <div
                 style={{
-                  fontSize: 14,
+                  fontSize: 22,
                   fontFamily: theme.fontSans,
                   color: theme.textMuted,
                   textAlign: "center",
-                  maxWidth: 170,
+                  maxWidth: 260,
                   lineHeight: 1.4,
                 }}
               >
@@ -172,6 +135,40 @@ export const ROIStats: React.FC = () => {
             </div>
           );
         })}
+      </div>
+
+      <div
+        style={{
+          position: "absolute",
+          bottom: "4%",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 20,
+          opacity: ctaOpacity,
+        }}
+      >
+        <Logo size={0.8} animate={false} />
+        <div
+          style={{
+            backgroundColor: theme.surface,
+            border: `1px solid ${theme.surfaceBorder}`,
+            borderRadius: 44,
+            padding: "20px 52px",
+            display: "flex",
+            alignItems: "center",
+            gap: 14,
+            boxShadow: theme.terminalGlow,
+          }}
+        >
+          <span style={{ color: theme.textMuted, fontFamily: theme.fontMono, fontSize: 36 }}>$</span>
+          <span style={{ color: theme.text, fontFamily: theme.fontMono, fontSize: 36, fontWeight: 500 }}>
+            npx @rely-ai/caliber init
+          </span>
+        </div>
+        <div style={{ fontSize: 30, fontFamily: theme.fontSans, color: theme.textSecondary, fontWeight: 400 }}>
+          One command. Every AI agent. Always in sync.
+        </div>
       </div>
     </AbsoluteFill>
   );

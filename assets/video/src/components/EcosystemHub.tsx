@@ -1,166 +1,139 @@
-import { AbsoluteFill, useCurrentFrame, interpolate, spring, useVideoConfig } from "remotion";
+import { AbsoluteFill, useCurrentFrame, interpolate } from "remotion";
 import { Logo } from "./Logo";
 import { theme } from "./theme";
 import { ClaudeIcon, CursorIcon, CodexIcon, CopilotIcon } from "./ToolIcons";
 
 const editors = [
-  { name: "Claude Code", Icon: ClaudeIcon, color: "#d4a574", angle: -40 },
-  { name: "Cursor", Icon: CursorIcon, color: "#7dd3fc", angle: 40 },
-  { name: "Codex", Icon: CodexIcon, color: "#86efac", angle: 150 },
-  { name: "Copilot", Icon: CopilotIcon, color: "#c4b5fd", angle: 210 },
+  { name: "Claude Code", Icon: ClaudeIcon, color: "#D97757", x: -420, y: -60 },
+  { name: "Cursor", Icon: CursorIcon, color: "#7dd3fc", x: 420, y: -60 },
+  { name: "Codex", Icon: CodexIcon, color: "#86efac", x: -340, y: 100 },
+  { name: "Copilot", Icon: CopilotIcon, color: "#c4b5fd", x: 340, y: 100 },
 ];
 
 export const EcosystemHub: React.FC = () => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
 
   const titleOpacity = interpolate(frame, [8, 22], [0, 1], { extrapolateRight: "clamp" });
-  const titleY = interpolate(frame, [8, 22], [12, 0], { extrapolateRight: "clamp" });
-  const taglineOpacity = interpolate(frame, [16, 30], [0, 1], { extrapolateRight: "clamp" });
-
-  // Subtle rotation of the whole orbit
-  const orbitRotation = interpolate(frame, [0, 90], [0, 8], { extrapolateRight: "clamp" });
+  const taglineOpacity = interpolate(frame, [20, 34], [0, 1], { extrapolateRight: "clamp" });
+  const subtitleOpacity = interpolate(frame, [36, 50], [0, 1], { extrapolateRight: "clamp" });
 
   return (
     <AbsoluteFill
       style={{
         justifyContent: "center",
         alignItems: "center",
-        background: `radial-gradient(ellipse 60% 50% at 50% 50%, ${theme.brand3}08, transparent)`,
+        background: `radial-gradient(ellipse 70% 60% at 50% 50%, ${theme.brand3}0a, transparent)`,
       }}
     >
-      {/* Outer glow ring */}
+      {/* Static orbit rings */}
       <div
         style={{
           position: "absolute",
-          width: 460,
-          height: 460,
+          width: 780,
+          height: 780,
           borderRadius: "50%",
-          border: `1px solid ${theme.brand3}10`,
-          opacity: interpolate(frame, [20, 40], [0, 1], { extrapolateRight: "clamp" }),
+          border: `1px solid ${theme.brand3}12`,
+          opacity: interpolate(frame, [20, 40], [0, 0.6], { extrapolateRight: "clamp" }),
         }}
       />
       <div
         style={{
           position: "absolute",
-          width: 380,
-          height: 380,
+          width: 660,
+          height: 660,
           borderRadius: "50%",
           border: `1px dashed ${theme.surfaceBorder}`,
-          opacity: interpolate(frame, [15, 35], [0, 0.5], { extrapolateRight: "clamp" }),
+          opacity: interpolate(frame, [18, 38], [0, 0.3], { extrapolateRight: "clamp" }),
         }}
       />
 
-      {/* Logo */}
-      <div style={{ marginBottom: 16 }}>
-        <Logo size={0.75} animate delay={0} />
+      <div style={{ marginBottom: 24, zIndex: 1 }}>
+        <Logo size={1.6} animate={false} />
       </div>
 
-      {/* Brand name */}
       <div
         style={{
-          fontSize: 64,
-          fontWeight: 700,
+          fontSize: 120,
+          fontWeight: 800,
           fontFamily: theme.fontSans,
-          letterSpacing: "-0.03em",
+          letterSpacing: "-0.04em",
           background: `linear-gradient(135deg, ${theme.brand1}, ${theme.brand3})`,
           WebkitBackgroundClip: "text",
           WebkitTextFillColor: "transparent",
           opacity: titleOpacity,
-          transform: `translateY(${titleY}px)`,
+          zIndex: 1,
         }}
       >
         caliber
       </div>
 
-      {/* Tagline */}
       <div
         style={{
-          fontSize: 24,
+          fontSize: 48,
           fontFamily: theme.fontSans,
           color: theme.textSecondary,
           opacity: taglineOpacity,
-          marginTop: 8,
+          marginTop: 14,
           fontWeight: 400,
+          zIndex: 1,
         }}
       >
         AI setup tailored for your codebase
       </div>
 
-      {/* Editor nodes with real icons */}
-      {editors.map((editor, i) => {
-        const delay = 14 + i * 5;
-        const s = spring({ frame: frame - delay, fps, config: { damping: 14, stiffness: 80 } });
-        const radius = 200;
-        const angle = ((editor.angle + orbitRotation) * Math.PI) / 180;
-        const x = Math.cos(angle) * radius * s;
-        const y = Math.sin(angle) * radius * 0.52 * s;
+      <div
+        style={{
+          marginTop: 28,
+          padding: "20px 48px",
+          borderRadius: 40,
+          backgroundColor: `${theme.brand3}12`,
+          border: `1px solid ${theme.brand3}25`,
+          opacity: subtitleOpacity,
+          display: "flex",
+          alignItems: "center",
+          gap: 14,
+          zIndex: 1,
+        }}
+      >
+        <span style={{ fontSize: 38, fontFamily: theme.fontSans, color: theme.brand1, fontWeight: 600 }}>
+          Bring your own AI
+        </span>
+        <span style={{ fontSize: 32, fontFamily: theme.fontSans, color: theme.textSecondary }}>
+          — API key or coding agent seat
+        </span>
+      </div>
 
-        const lineProgress = interpolate(frame, [delay + 6, delay + 16], [0, 1], {
+      {/* Editor pills — simple fade in at fixed positions */}
+      {editors.map((editor, i) => {
+        const delay = 16 + i * 5;
+        const opacity = interpolate(frame, [delay, delay + 10], [0, 1], {
           extrapolateLeft: "clamp",
           extrapolateRight: "clamp",
         });
 
-        // Pulsing glow on connection
-        const pulsePhase = ((frame - delay) % 40) / 40;
-        const pulseOpacity = s > 0.9 ? 0.15 + Math.sin(pulsePhase * Math.PI * 2) * 0.1 : 0;
-
         return (
-          <div key={editor.name}>
-            {/* Connection line */}
-            <svg
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                width: "100%",
-                height: "100%",
-                pointerEvents: "none",
-              }}
-            >
-              <defs>
-                <linearGradient id={`line-${i}`} x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor={theme.brand3} stopOpacity={0.4} />
-                  <stop offset="100%" stopColor={editor.color} stopOpacity={0.3} />
-                </linearGradient>
-              </defs>
-              <line
-                x1="50%"
-                y1="44%"
-                x2={`${50 + (x / 12.8)}%`}
-                y2={`${44 + (y / 7.2)}%`}
-                stroke={`url(#line-${i})`}
-                strokeWidth={1.5}
-                opacity={lineProgress}
-                strokeDasharray="4 6"
-              />
-            </svg>
-
-            {/* Editor pill with real icon */}
-            <div
-              style={{
-                position: "absolute",
-                left: `calc(50% + ${x}px - 68px)`,
-                top: `calc(44% + ${y}px - 20px)`,
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "10px 18px",
-                borderRadius: 24,
-                backgroundColor: theme.surface,
-                border: `1px solid ${theme.surfaceBorder}`,
-                color: theme.text,
-                fontSize: 16,
-                fontWeight: 500,
-                fontFamily: theme.fontSans,
-                opacity: s,
-                transform: `scale(${interpolate(s, [0, 1], [0.8, 1])})`,
-                boxShadow: `0 0 24px ${editor.color}${Math.round(pulseOpacity * 255).toString(16).padStart(2, "0")}`,
-              }}
-            >
-              <editor.Icon size={20} color={editor.color} />
-              {editor.name}
-            </div>
+          <div
+            key={editor.name}
+            style={{
+              position: "absolute",
+              left: `calc(50% + ${editor.x}px - 120px)`,
+              top: `calc(44% + ${editor.y}px - 32px)`,
+              display: "flex",
+              alignItems: "center",
+              gap: 14,
+              padding: "18px 32px",
+              borderRadius: 36,
+              backgroundColor: theme.surface,
+              border: `1px solid ${theme.surfaceBorder}`,
+              color: theme.text,
+              fontSize: 30,
+              fontWeight: 500,
+              fontFamily: theme.fontSans,
+              opacity,
+            }}
+          >
+            <editor.Icon size={36} color={editor.color} />
+            {editor.name}
           </div>
         );
       })}
