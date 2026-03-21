@@ -14,12 +14,12 @@ export const EcosystemHub: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  const titleOpacity = interpolate(frame, [8, 22], [0, 1], { extrapolateRight: "clamp" });
-  const titleY = interpolate(frame, [8, 22], [12, 0], { extrapolateRight: "clamp" });
-  const taglineOpacity = interpolate(frame, [16, 30], [0, 1], { extrapolateRight: "clamp" });
+  const titleOpacity = interpolate(frame, [10, 28], [0, 1], { extrapolateRight: "clamp" });
+  const titleY = interpolate(frame, [10, 28], [16, 0], { extrapolateRight: "clamp" });
+  const taglineOpacity = interpolate(frame, [22, 40], [0, 1], { extrapolateRight: "clamp" });
+  const subtitleOpacity = interpolate(frame, [50, 68], [0, 1], { extrapolateRight: "clamp" });
 
-  // Subtle rotation of the whole orbit
-  const orbitRotation = interpolate(frame, [0, 90], [0, 8], { extrapolateRight: "clamp" });
+  const orbitRotation = interpolate(frame, [0, 120], [0, 12], { extrapolateRight: "clamp" });
 
   return (
     <AbsoluteFill
@@ -33,33 +33,33 @@ export const EcosystemHub: React.FC = () => {
       <div
         style={{
           position: "absolute",
-          width: 460,
-          height: 460,
+          width: 500,
+          height: 500,
           borderRadius: "50%",
           border: `1px solid ${theme.brand3}10`,
-          opacity: interpolate(frame, [20, 40], [0, 1], { extrapolateRight: "clamp" }),
+          opacity: interpolate(frame, [20, 45], [0, 1], { extrapolateRight: "clamp" }),
         }}
       />
       <div
         style={{
           position: "absolute",
-          width: 380,
-          height: 380,
+          width: 420,
+          height: 420,
           borderRadius: "50%",
           border: `1px dashed ${theme.surfaceBorder}`,
-          opacity: interpolate(frame, [15, 35], [0, 0.5], { extrapolateRight: "clamp" }),
+          opacity: interpolate(frame, [18, 40], [0, 0.5], { extrapolateRight: "clamp" }),
         }}
       />
 
       {/* Logo */}
       <div style={{ marginBottom: 16 }}>
-        <Logo size={0.75} animate delay={0} />
+        <Logo size={1} animate delay={0} />
       </div>
 
       {/* Brand name */}
       <div
         style={{
-          fontSize: 64,
+          fontSize: 80,
           fontWeight: 700,
           fontFamily: theme.fontSans,
           letterSpacing: "-0.03em",
@@ -73,41 +73,53 @@ export const EcosystemHub: React.FC = () => {
         caliber
       </div>
 
-      {/* Tagline */}
+      {/* Primary tagline */}
       <div
         style={{
-          fontSize: 24,
+          fontSize: 32,
           fontFamily: theme.fontSans,
           color: theme.textSecondary,
           opacity: taglineOpacity,
-          marginTop: 8,
+          marginTop: 10,
           fontWeight: 400,
         }}
       >
         AI setup tailored for your codebase
       </div>
 
+      {/* Key message */}
+      <div
+        style={{
+          fontSize: 24,
+          fontFamily: theme.fontSans,
+          color: theme.brand2,
+          opacity: subtitleOpacity,
+          marginTop: 14,
+          fontWeight: 500,
+        }}
+      >
+        Bring your own AI — API key or coding agent seat
+      </div>
+
       {/* Editor nodes with real icons */}
       {editors.map((editor, i) => {
-        const delay = 14 + i * 5;
-        const s = spring({ frame: frame - delay, fps, config: { damping: 14, stiffness: 80 } });
-        const radius = 200;
+        const delay = 16 + i * 6;
+        const s = spring({ frame: frame - delay, fps, config: { damping: 14, stiffness: 70 } });
+        const radius = 220;
         const angle = ((editor.angle + orbitRotation) * Math.PI) / 180;
         const x = Math.cos(angle) * radius * s;
         const y = Math.sin(angle) * radius * 0.52 * s;
 
-        const lineProgress = interpolate(frame, [delay + 6, delay + 16], [0, 1], {
+        const lineProgress = interpolate(frame, [delay + 8, delay + 20], [0, 1], {
           extrapolateLeft: "clamp",
           extrapolateRight: "clamp",
         });
 
-        // Pulsing glow on connection
         const pulsePhase = ((frame - delay) % 40) / 40;
         const pulseOpacity = s > 0.9 ? 0.15 + Math.sin(pulsePhase * Math.PI * 2) * 0.1 : 0;
 
         return (
           <div key={editor.name}>
-            {/* Connection line */}
             <svg
               style={{
                 position: "absolute",
@@ -136,21 +148,20 @@ export const EcosystemHub: React.FC = () => {
               />
             </svg>
 
-            {/* Editor pill with real icon */}
             <div
               style={{
                 position: "absolute",
-                left: `calc(50% + ${x}px - 68px)`,
-                top: `calc(44% + ${y}px - 20px)`,
+                left: `calc(50% + ${x}px - 80px)`,
+                top: `calc(44% + ${y}px - 22px)`,
                 display: "flex",
                 alignItems: "center",
-                gap: 8,
-                padding: "10px 18px",
-                borderRadius: 24,
+                gap: 10,
+                padding: "12px 22px",
+                borderRadius: 28,
                 backgroundColor: theme.surface,
                 border: `1px solid ${theme.surfaceBorder}`,
                 color: theme.text,
-                fontSize: 16,
+                fontSize: 20,
                 fontWeight: 500,
                 fontFamily: theme.fontSans,
                 opacity: s,
@@ -158,7 +169,7 @@ export const EcosystemHub: React.FC = () => {
                 boxShadow: `0 0 24px ${editor.color}${Math.round(pulseOpacity * 255).toString(16).padStart(2, "0")}`,
               }}
             >
-              <editor.Icon size={20} color={editor.color} />
+              <editor.Icon size={24} color={editor.color} />
               {editor.name}
             </div>
           </div>

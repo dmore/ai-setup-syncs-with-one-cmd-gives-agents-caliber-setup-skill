@@ -13,16 +13,15 @@ export const SyncAnimation: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  const headerOpacity = interpolate(frame, [0, 10], [0, 1], { extrapolateRight: "clamp" });
-  const codeSpring = spring({ frame, fps, config: { damping: 16, stiffness: 100 } });
-  const arrowProgress = interpolate(frame, [14, 26], [0, 1], {
+  const headerOpacity = interpolate(frame, [0, 14], [0, 1], { extrapolateRight: "clamp" });
+  const codeSpring = spring({ frame, fps, config: { damping: 16, stiffness: 90 } });
+  const arrowProgress = interpolate(frame, [18, 34], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
 
-  // Continuous sync loop indicator
   const loopPulse = Math.sin(((frame % 30) / 30) * Math.PI * 2);
-  const loopOpacity = interpolate(frame, [50, 60], [0, 1], { extrapolateRight: "clamp" });
+  const loopOpacity = interpolate(frame, [65, 80], [0, 1], { extrapolateRight: "clamp" });
 
   return (
     <AbsoluteFill
@@ -36,8 +35,8 @@ export const SyncAnimation: React.FC = () => {
       <div
         style={{
           position: "absolute",
-          top: "8%",
-          fontSize: 18,
+          top: "6%",
+          fontSize: 24,
           fontFamily: theme.fontMono,
           color: theme.textMuted,
           textTransform: "uppercase",
@@ -52,8 +51,8 @@ export const SyncAnimation: React.FC = () => {
       <div
         style={{
           position: "absolute",
-          top: "15%",
-          fontSize: 36,
+          top: "13%",
+          fontSize: 46,
           fontWeight: 700,
           fontFamily: theme.fontSans,
           color: theme.text,
@@ -61,20 +60,20 @@ export const SyncAnimation: React.FC = () => {
           letterSpacing: "-0.02em",
         }}
       >
-        Configs stay fresh as your code evolves
+        Continuous sync — configs evolve with code
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 32, marginTop: 16 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 40, marginTop: 24 }}>
         {/* Code diff card */}
         <div
           style={{
             backgroundColor: theme.surface,
             border: `1px solid ${theme.surfaceBorder}`,
             borderRadius: theme.radius,
-            padding: "18px 22px",
+            padding: "22px 28px",
             opacity: codeSpring,
             transform: `scale(${interpolate(codeSpring, [0, 1], [0.95, 1])})`,
-            minWidth: 280,
+            minWidth: 320,
           }}
         >
           {/* macOS window dots */}
@@ -82,20 +81,20 @@ export const SyncAnimation: React.FC = () => {
             style={{
               display: "flex",
               alignItems: "center",
-              gap: 6,
-              marginBottom: 12,
-              paddingBottom: 10,
+              gap: 7,
+              marginBottom: 14,
+              paddingBottom: 12,
               borderBottom: `1px solid ${theme.surfaceBorder}`,
             }}
           >
-            <div style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: theme.red }} />
-            <div style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: theme.yellow }} />
-            <div style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: theme.green }} />
-            <span style={{ color: theme.textMuted, fontSize: 11, fontFamily: theme.fontMono, marginLeft: 8 }}>
+            <div style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: theme.red }} />
+            <div style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: theme.yellow }} />
+            <div style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: theme.green }} />
+            <span style={{ color: theme.textMuted, fontSize: 14, fontFamily: theme.fontMono, marginLeft: 10 }}>
               git diff
             </span>
           </div>
-          <div style={{ fontFamily: theme.fontMono, fontSize: 15, lineHeight: 1.9 }}>
+          <div style={{ fontFamily: theme.fontMono, fontSize: 19, lineHeight: 2 }}>
             <div>
               <span style={{ color: theme.green, fontWeight: 600 }}>+</span>
               <span style={{ color: "#c4b5fd" }}> export function </span>
@@ -111,19 +110,19 @@ export const SyncAnimation: React.FC = () => {
               <span style={{ color: "#c4b5fd" }}> export function </span>
               <span style={{ color: theme.text }}>rateLimit</span>
             </div>
-            <div style={{ marginTop: 6, color: theme.textMuted, fontSize: 13 }}>
+            <div style={{ marginTop: 8, color: theme.textMuted, fontSize: 16 }}>
               src/lib/auth.ts — 3 new exports
             </div>
           </div>
         </div>
 
-        {/* Sync arrow — circular refresh indicator */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+        {/* Sync arrow */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
           <div
             style={{
-              width: 52,
-              height: 52,
-              borderRadius: 26,
+              width: 64,
+              height: 64,
+              borderRadius: 32,
               backgroundColor: theme.surface,
               border: `1px solid ${theme.surfaceBorder}`,
               display: "flex",
@@ -131,11 +130,10 @@ export const SyncAnimation: React.FC = () => {
               alignItems: "center",
               opacity: arrowProgress,
               transform: `scale(${arrowProgress})`,
-              boxShadow: `0 0 20px ${theme.brand3}15`,
+              boxShadow: `0 0 24px ${theme.brand3}15`,
             }}
           >
-            {/* Circular arrow SVG */}
-            <svg width={28} height={28} viewBox="0 0 24 24" fill="none">
+            <svg width={34} height={34} viewBox="0 0 24 24" fill="none">
               <path
                 d="M4 12C4 7.58 7.58 4 12 4C15.37 4 18.24 6.11 19.38 9"
                 stroke={theme.brand2}
@@ -154,7 +152,7 @@ export const SyncAnimation: React.FC = () => {
           </div>
           <span
             style={{
-              fontSize: 11,
+              fontSize: 15,
               fontFamily: theme.fontMono,
               color: theme.brand2,
               opacity: arrowProgress,
@@ -166,35 +164,35 @@ export const SyncAnimation: React.FC = () => {
         </div>
 
         {/* Output files with platform icons */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {outputFiles.map((file, i) => {
-            const delay = 18 + i * 5;
-            const s = spring({ frame: frame - delay, fps, config: { damping: 14, stiffness: 90 } });
+            const delay = 22 + i * 6;
+            const s = spring({ frame: frame - delay, fps, config: { damping: 14, stiffness: 80 } });
             return (
               <div
                 key={file.name}
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: 10,
-                  padding: "8px 14px",
+                  gap: 12,
+                  padding: "10px 18px",
                   backgroundColor: theme.surface,
                   border: `1px solid ${theme.surfaceBorder}`,
                   borderRadius: theme.radiusSm,
                   opacity: s,
-                  transform: `translateX(${interpolate(s, [0, 1], [16, 0])}px)`,
+                  transform: `translateX(${interpolate(s, [0, 1], [18, 0])}px)`,
                 }}
               >
-                <file.Icon size={18} color={file.color} />
+                <file.Icon size={22} color={file.color} />
                 <div style={{ display: "flex", flexDirection: "column" }}>
-                  <span style={{ color: theme.text, fontSize: 16, fontFamily: theme.fontMono, fontWeight: 500 }}>
+                  <span style={{ color: theme.text, fontSize: 20, fontFamily: theme.fontMono, fontWeight: 500 }}>
                     {file.name}
                   </span>
-                  <span style={{ color: theme.textMuted, fontSize: 13, fontFamily: theme.fontSans }}>
+                  <span style={{ color: theme.textMuted, fontSize: 15, fontFamily: theme.fontSans }}>
                     {file.platform}
                   </span>
                 </div>
-                <span style={{ color: theme.green, fontSize: 12, fontWeight: 700, marginLeft: "auto" }}>✓</span>
+                <span style={{ color: theme.green, fontSize: 16, fontWeight: 700, marginLeft: "auto" }}>✓</span>
               </div>
             );
           })}
@@ -205,28 +203,27 @@ export const SyncAnimation: React.FC = () => {
       <div
         style={{
           position: "absolute",
-          bottom: "10%",
+          bottom: "7%",
           display: "flex",
           alignItems: "center",
-          gap: 12,
-          padding: "10px 24px",
-          borderRadius: 24,
+          gap: 14,
+          padding: "14px 32px",
+          borderRadius: 28,
           backgroundColor: `${theme.brand3}10`,
           border: `1px solid ${theme.brand3}20`,
           opacity: loopOpacity,
         }}
       >
-        {/* Pulsing dot */}
         <div
           style={{
-            width: 8,
-            height: 8,
-            borderRadius: 4,
+            width: 10,
+            height: 10,
+            borderRadius: 5,
             backgroundColor: theme.green,
             boxShadow: `0 0 ${6 + loopPulse * 4}px ${theme.green}60`,
           }}
         />
-        <span style={{ color: theme.textSecondary, fontSize: 17, fontFamily: theme.fontSans, fontWeight: 500 }}>
+        <span style={{ color: theme.textSecondary, fontSize: 22, fontFamily: theme.fontSans, fontWeight: 500 }}>
           Every push. Every branch. Always in sync.
         </span>
       </div>

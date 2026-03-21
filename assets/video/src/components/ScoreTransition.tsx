@@ -26,18 +26,17 @@ export const ScoreTransition: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  const containerOpacity = interpolate(frame, [0, 8], [0, 1], { extrapolateRight: "clamp" });
+  const containerOpacity = interpolate(frame, [0, 12], [0, 1], { extrapolateRight: "clamp" });
 
-  // Phase 1: show "before" (frames 0-20)
-  // Phase 2: animate to "after" (frames 20-50)
-  const transitionProgress = spring({ frame: frame - 18, fps, config: { damping: 22, mass: 0.6 } });
+  // Slower transition: starts at frame 30, completes by ~60
+  const transitionProgress = spring({ frame: frame - 28, fps, config: { damping: 22, mass: 0.8 } });
   const score = Math.round(interpolate(transitionProgress, [0, 1], [47, 94]));
   const barWidth = interpolate(transitionProgress, [0, 1], [47, 94]);
   const scoreColor = getScoreColor(score);
   const grade = getGrade(score);
 
-  // Glow pulse on completion
-  const glowIntensity = score >= 90 ? interpolate(frame, [45, 55], [0, 1], { extrapolateRight: "clamp" }) : 0;
+  const glowIntensity = score >= 90 ? interpolate(frame, [60, 75], [0, 1], { extrapolateRight: "clamp" }) : 0;
+  const subtitleOpacity = interpolate(frame, [75, 95], [0, 1], { extrapolateRight: "clamp" });
 
   return (
     <AbsoluteFill
@@ -52,8 +51,8 @@ export const ScoreTransition: React.FC = () => {
       <div
         style={{
           position: "absolute",
-          top: "10%",
-          fontSize: 18,
+          top: "8%",
+          fontSize: 24,
           fontFamily: theme.fontMono,
           color: theme.textMuted,
           textTransform: "uppercase",
@@ -68,18 +67,18 @@ export const ScoreTransition: React.FC = () => {
         style={{
           backgroundColor: theme.surface,
           borderRadius: theme.radiusLg,
-          padding: "44px 56px",
+          padding: "52px 72px",
           border: `1px solid ${theme.surfaceBorder}`,
-          minWidth: 640,
+          minWidth: 720,
           boxShadow: `0 0 ${40 * glowIntensity}px ${theme.green}20`,
         }}
       >
         {/* Score row */}
-        <div style={{ display: "flex", alignItems: "baseline", gap: 16, marginBottom: 20 }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 20, marginBottom: 24 }}>
           <span
             style={{
               color: theme.text,
-              fontSize: 80,
+              fontSize: 100,
               fontWeight: 700,
               fontFamily: theme.fontSans,
               fontVariantNumeric: "tabular-nums",
@@ -88,16 +87,16 @@ export const ScoreTransition: React.FC = () => {
           >
             {score}
           </span>
-          <span style={{ color: theme.textMuted, fontSize: 26, fontFamily: theme.fontSans }}>/100</span>
+          <span style={{ color: theme.textMuted, fontSize: 36, fontFamily: theme.fontSans }}>/100</span>
           <div
             style={{
               marginLeft: "auto",
-              padding: "6px 20px",
-              borderRadius: 24,
+              padding: "8px 28px",
+              borderRadius: 28,
               backgroundColor: `${scoreColor}15`,
               border: `1px solid ${scoreColor}30`,
               color: scoreColor,
-              fontSize: 28,
+              fontSize: 36,
               fontWeight: 700,
               fontFamily: theme.fontSans,
             }}
@@ -110,11 +109,11 @@ export const ScoreTransition: React.FC = () => {
         <div
           style={{
             width: "100%",
-            height: 8,
+            height: 10,
             backgroundColor: `${theme.textMuted}20`,
-            borderRadius: 4,
+            borderRadius: 5,
             overflow: "hidden",
-            marginBottom: 24,
+            marginBottom: 28,
           }}
         >
           <div
@@ -122,17 +121,17 @@ export const ScoreTransition: React.FC = () => {
               width: `${barWidth}%`,
               height: "100%",
               backgroundColor: scoreColor,
-              borderRadius: 4,
-              boxShadow: `0 0 12px ${scoreColor}40`,
+              borderRadius: 5,
+              boxShadow: `0 0 14px ${scoreColor}40`,
             }}
           />
         </div>
 
         {/* Check items */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           {checks.map((check, i) => {
             const checkProgress = spring({
-              frame: frame - 22 - i * 3,
+              frame: frame - 34 - i * 4,
               fps,
               config: { damping: 14 },
             });
@@ -141,20 +140,20 @@ export const ScoreTransition: React.FC = () => {
             const symbolColor = symbol === "✓" ? theme.green : symbol === "✗" ? theme.red : theme.textMuted;
 
             return (
-              <div key={check.label} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div key={check.label} style={{ display: "flex", alignItems: "center", gap: 14 }}>
                 <span
                   style={{
-                    width: 20,
+                    width: 28,
                     textAlign: "center",
                     color: symbolColor,
-                    fontSize: 18,
+                    fontSize: 24,
                     fontFamily: theme.fontMono,
                     fontWeight: 600,
                   }}
                 >
                   {symbol}
                 </span>
-                <span style={{ color: theme.textSecondary, fontSize: 18, fontFamily: theme.fontSans }}>
+                <span style={{ color: theme.textSecondary, fontSize: 24, fontFamily: theme.fontSans }}>
                   {check.label}
                 </span>
               </div>
@@ -163,18 +162,37 @@ export const ScoreTransition: React.FC = () => {
         </div>
       </div>
 
-      {/* Subtitle */}
+      {/* Key message */}
       <div
         style={{
           position: "absolute",
-          bottom: "12%",
-          fontSize: 22,
-          fontFamily: theme.fontSans,
-          color: theme.textMuted,
-          opacity: interpolate(frame, [48, 58], [0, 1], { extrapolateRight: "clamp" }),
+          bottom: "8%",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 8,
+          opacity: subtitleOpacity,
         }}
       >
-        Bad setup = bad agent
+        <div
+          style={{
+            fontSize: 28,
+            fontFamily: theme.fontSans,
+            color: theme.text,
+            fontWeight: 600,
+          }}
+        >
+          Fully runs on your setup
+        </div>
+        <div
+          style={{
+            fontSize: 20,
+            fontFamily: theme.fontSans,
+            color: theme.textMuted,
+          }}
+        >
+          No code sent anywhere. 100% local scoring.
+        </div>
       </div>
     </AbsoluteFill>
   );

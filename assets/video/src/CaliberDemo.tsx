@@ -4,7 +4,6 @@ import { EcosystemHub } from "./components/EcosystemHub";
 import { SkillsFlow } from "./components/SkillsFlow";
 import { SyncAnimation } from "./components/SyncAnimation";
 import { ROIStats } from "./components/ROIStats";
-import { CallToAction } from "./components/CallToAction";
 import { theme } from "./components/theme";
 
 const CrossFade: React.FC<{ children: React.ReactNode; from: number; duration: number }> = ({
@@ -13,11 +12,11 @@ const CrossFade: React.FC<{ children: React.ReactNode; from: number; duration: n
   duration,
 }) => {
   const frame = useCurrentFrame();
-  const fadeIn = interpolate(frame, [from, from + 8], [0, 1], {
+  const fadeIn = interpolate(frame, [from, from + 10], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
-  const fadeOut = interpolate(frame, [from + duration - 8, from + duration], [1, 0], {
+  const fadeOut = interpolate(frame, [from + duration - 10, from + duration], [1, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
@@ -26,14 +25,13 @@ const CrossFade: React.FC<{ children: React.ReactNode; from: number; duration: n
   return <AbsoluteFill style={{ opacity }}>{children}</AbsoluteFill>;
 };
 
-// 15 seconds = 450 frames @ 30fps
-// Scene breakdown:
-//   0-3s   (0-90):   EcosystemHub — logo + editors with real icons
-//   3-5.5s (90-165):  ScoreTransition — 47 → 94
-//   5.5-8s (165-240): SkillsFlow — registries + skills
-//   8-11s  (240-330): SyncAnimation — continuous sync (enhanced)
-//  11-13s  (330-390): ROI Stats — the payoff numbers
-//  13-15s  (390-450): CTA — install + tagline
+// 20 seconds = 600 frames @ 30fps
+// Scene breakdown (each scene gets 4 seconds = 120 frames):
+//   0-4s   (0-120):   EcosystemHub — Bring your own AI
+//   4-8s   (120-240): ScoreTransition — Fully runs on your setup
+//   8-12s  (240-360): SkillsFlow — Best skills & MCPs
+//   12-16s (360-480): SyncAnimation — Continuous sync
+//   16-20s (480-600): ROI + CTA — Max velocity, min cost
 
 export const CaliberDemo: React.FC = () => {
   return (
@@ -47,45 +45,38 @@ export const CaliberDemo: React.FC = () => {
         }}
       />
 
-      {/* 0-3s: Ecosystem hub */}
-      <CrossFade from={0} duration={90}>
-        <Sequence from={0} durationInFrames={90}>
+      {/* 0-4s: Ecosystem hub — Bring your own AI */}
+      <CrossFade from={0} duration={120}>
+        <Sequence from={0} durationInFrames={120}>
           <EcosystemHub />
         </Sequence>
       </CrossFade>
 
-      {/* 3-5.5s: Score transformation */}
-      <CrossFade from={90} duration={75}>
-        <Sequence from={90} durationInFrames={75}>
+      {/* 4-8s: Score — Fully runs on your setup */}
+      <CrossFade from={120} duration={120}>
+        <Sequence from={120} durationInFrames={120}>
           <ScoreTransition />
         </Sequence>
       </CrossFade>
 
-      {/* 5.5-8s: Community skills */}
-      <CrossFade from={165} duration={75}>
-        <Sequence from={165} durationInFrames={75}>
+      {/* 8-12s: Skills — Best skills & MCPs */}
+      <CrossFade from={240} duration={120}>
+        <Sequence from={240} durationInFrames={120}>
           <SkillsFlow />
         </Sequence>
       </CrossFade>
 
-      {/* 8-11s: Continuous sync (enhanced) */}
-      <CrossFade from={240} duration={90}>
-        <Sequence from={240} durationInFrames={90}>
+      {/* 12-16s: Continuous sync */}
+      <CrossFade from={360} duration={120}>
+        <Sequence from={360} durationInFrames={120}>
           <SyncAnimation />
         </Sequence>
       </CrossFade>
 
-      {/* 11-13s: ROI stats */}
-      <CrossFade from={330} duration={60}>
-        <Sequence from={330} durationInFrames={60}>
+      {/* 16-20s: ROI + CTA */}
+      <CrossFade from={480} duration={120}>
+        <Sequence from={480} durationInFrames={120}>
           <ROIStats />
-        </Sequence>
-      </CrossFade>
-
-      {/* 13-15s: CTA */}
-      <CrossFade from={390} duration={60}>
-        <Sequence from={390} durationInFrames={60}>
-          <CallToAction />
         </Sequence>
       </CrossFade>
     </AbsoluteFill>
