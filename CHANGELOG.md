@@ -1,3 +1,9 @@
+## v1.30.0 (2026-03-23)
+
+### Features
+
+- AI context infrastructure rebrand, refresh quality gate, score history, and prompt hardening (#82)
+
 ## v1.29.7 (2026-03-23)
 
 ### Bug Fixes
