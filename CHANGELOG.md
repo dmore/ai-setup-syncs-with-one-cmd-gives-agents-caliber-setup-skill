@@ -1,3 +1,9 @@
+## v1.30.4 (2026-03-26)
+
+### Other
+
+- fix for issue #90: Can't set Cursor model
+
 ## v1.30.3 (2026-03-26)
 
 ### Other
