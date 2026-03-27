@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
+import { sanitizeSecrets } from '../lib/sanitize.js';
 
 const IGNORE_DIRS = new Set([
   'node_modules', '.git', '.next', 'dist', 'build', '.cache',
@@ -19,7 +20,7 @@ const TEXT_EXTENSIONS = new Set([
   '.sh', '.bash', '.zsh', '.fish',
   '.sql', '.graphql', '.gql', '.prisma',
   '.html', '.css', '.scss', '.sass', '.less', '.svelte', '.vue', '.astro',
-  '.json', '.yaml', '.yml', '.toml', '.ini', '.cfg', '.env',
+  '.json', '.yaml', '.yml', '.toml', '.ini', '.cfg',
   '.xml', '.plist',
   '.md', '.mdx', '.txt', '.rst',
   '.tf', '.hcl',
@@ -40,6 +41,7 @@ const SKIP_PATTERNS = [
   /\.d\.ts$/,
   /\.generated\./,
   /\.snap$/,
+  /^\.env($|\.)/,
 ];
 
 const COMMENT_LINE: Record<string, RegExp> = {
@@ -54,7 +56,7 @@ const EXT_COMMENT: Record<string, string> = {
   '.c': 'c', '.cpp': 'c', '.h': 'c', '.hpp': 'c', '.swift': 'c', '.php': 'c',
   '.py': 'h', '.pyw': 'h', '.rb': 'h', '.sh': 'h', '.bash': 'h', '.zsh': 'h',
   '.fish': 'h', '.r': 'h', '.tf': 'h', '.hcl': 'h', '.yaml': 'h', '.yml': 'h',
-  '.toml': 'h', '.ini': 'h', '.cfg': 'h', '.env': 'h',
+  '.toml': 'h', '.ini': 'h', '.cfg': 'h',
   '.html': 'x', '.xml': 'x', '.vue': 'x', '.svelte': 'x',
 };
 
@@ -415,8 +417,8 @@ export function analyzeCode(dir: string): CodeAnalysis {
     const similar = group.slice(1).filter(f => structuralFingerprint(f.compressed, f.ext) === repFP);
     const unique = group.slice(1).filter(f => structuralFingerprint(f.compressed, f.ext) !== repFP);
 
-    // Representative gets full compressed content
-    const repEntry = { path: rep.path, content: rep.compressed, size: rep.compressed.length, priority: rep.score };
+    // Representative gets full compressed content (sanitized for secrets)
+    const repEntry = { path: rep.path, content: sanitizeSecrets(rep.compressed), size: rep.compressed.length, priority: rep.score };
     const repSize = rep.path.length + rep.compressed.length + 10;
     if (includedChars + repSize <= CHAR_BUDGET) {
       result.push(repEntry);
@@ -435,11 +437,11 @@ export function analyzeCode(dir: string): CodeAnalysis {
       }
     }
 
-    // Unique files in same directory get skeleton
+    // Unique files in same directory get skeleton (sanitized for secrets)
     for (const f of unique) {
       const skeletonSize = f.path.length + f.skeleton.length + 10;
       if (includedChars + skeletonSize <= CHAR_BUDGET) {
-        result.push({ path: f.path, content: f.skeleton, size: f.skeleton.length, priority: f.score });
+        result.push({ path: f.path, content: sanitizeSecrets(f.skeleton), size: f.skeleton.length, priority: f.score });
         includedChars += skeletonSize;
       }
     }
@@ -451,7 +453,7 @@ export function analyzeCode(dir: string): CodeAnalysis {
     if (includedPaths.has(f.path)) continue;
     const skeletonSize = f.path.length + f.skeleton.length + 10;
     if (includedChars + skeletonSize > CHAR_BUDGET) continue;
-    result.push({ path: f.path, content: f.skeleton, size: f.skeleton.length, priority: f.score });
+    result.push({ path: f.path, content: sanitizeSecrets(f.skeleton), size: f.skeleton.length, priority: f.score });
     includedChars += skeletonSize;
   }
 
@@ -505,7 +507,7 @@ function filePriority(filePath: string): number {
   ]);
 
   if (entryPoints.has(base)) return 40;
-  if (/\.(json|ya?ml|toml|ini|cfg|env)$|config\.|Makefile|Dockerfile/i.test(filePath)) return 35;
+  if (/\.(json|ya?ml|toml|ini|cfg)$|config\.|Makefile|Dockerfile/i.test(filePath)) return 35;
   if (/(route|api|controller|endpoint|handler)/i.test(filePath)) return 30;
   if (/(types|schema|models|entities|migration)/i.test(filePath)) return 25;
   if (/(service|lib|utils|helper|middleware)/i.test(filePath)) return 20;
