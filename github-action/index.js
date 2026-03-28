@@ -103,7 +103,7 @@ function buildComment(result, baseResult, agent) {
   }
 
   lines.push('---');
-  lines.push('*Powered by [Caliber](https://github.com/rely-ai-org/caliber)*');
+  lines.push('*Powered by [Caliber](https://github.com/caliber-ai-org/ai-setup)*');
   return lines.join('\n');
 }
 

@@ -1,7 +1,7 @@
 # Caliber Learnings
 
 Accumulated patterns and anti-patterns from development sessions.
-Auto-managed by [caliber](https://github.com/rely-ai-org/caliber) — do not edit manually.
+Auto-managed by [caliber](https://github.com/caliber-ai-org/ai-setup) — do not edit manually.
 
 - **[gotcha]** GitHub `<video>` tags in README.md do NOT render in the main repo view — GitHub strips `<video>` from rendered markdown. Use `<img src="...gif">` for animated content in README, or link to the MP4 separately. The `<video>` tag only works in GitHub Issues, PRs, and Discussions.
 - **[gotcha]** `WebFetch` from `raw.githubusercontent.com` can silently return empty responses for some SVG files (e.g., `openai.svg`). Use `cdn.jsdelivr.net/npm/simple-icons@latest/icons/<name>.svg` via `curl` as a reliable fallback for fetching simple-icons SVGs.
@@ -18,7 +18,7 @@ Auto-managed by [caliber](https://github.com/rely-ai-org/caliber) — do not edi
 - **[pattern]** Quality gates on refresh: snapshot pre-refresh scores and file contents, compute post-refresh scores, and revert all changes if the score regressed. This prevents LLM-generated updates from degrading config quality. Store snapshots in a Map and restore on failure.
 - **[pattern]** Rate-limit refresh operations with a 30-second cooldown (`REFRESH_COOLDOWN_MS = 30_000`). Check `state?.lastRefreshTimestamp` before running to prevent excessive LLM calls when running refresh in tight loops (e.g., from CI or hooks).
 - **[pattern]** Retry LLM calls once on transient failure in `refresh` command — catch first error, retry the same payload, then fail with the original error if retry fails. This improves resilience in hook-triggered refreshes which run silently.
-- **[pattern]** Insights command displays config score trends from history: read `readScoreHistory()`, compute trend direction (`up`/`down`/`stable`), and show delta with arrow symbol (\u2191/\u2193/\u2192). Helps users visualize whether their config quality is improving.
+- **[pattern]** Insights command displays config score trends from history: read `readScoreHistory()`, compute trend direction (`up`/`down`/`stable`), and show delta with arrow symbol (↑/↓/→). Helps users visualize whether their config quality is improving.
 - **[pattern]** Cold-start insights messaging: when no learning hooks are installed, explain briefly what session learning does (captures patterns from coding sessions) and how to enable it. Prompt clarity improves adoption.
 - **[pattern]** Early-stage insights (1-19 sessions): show progress tracker ("X/20 sessions tracked") to set expectations for when full insights unlock. Reduces confusion about when ROI data becomes meaningful.
 - **[gotcha]** When running `caliber` via `npx` (e.g., `npx @rely-ai/caliber init`), the temporary binary path becomes stale after the npx process exits. Always use `npx --yes @rely-ai/caliber` in hooks and generated commands to ensure it resolves correctly across sessions. Bare `caliber` commands only work if the binary is globally installed or on PATH.
@@ -26,7 +26,6 @@ Auto-managed by [caliber](https://github.com/rely-ai-org/caliber) — do not edi
 - **[pattern]** Use `resolveCaliber()` helper to dynamically determine the caliber binary invocation across all user-facing messages, error messages, and hook/script generation. This ensures consistency whether caliber is run globally, via npx, or from an absolute path. Cache the result locally with `const bin = resolveCaliber()` when used multiple times in a function.
 - **[convention]** Lazy-initialize dynamic CLI command strings (in getters or functions) rather than as static module-level constants, so `resolveCaliber()` is called at message-generation time, not module-load time. This ensures hooks and error messages reflect the actual invocation method.
 - **[fix]** When changing error message patterns in `seat-based-errors.ts` that contain dynamic commands, use lazy evaluation: change `message: string` to `message: () => string` and invoke with `message()` at call sites, so the command string is generated only when needed (avoiding stale resolution at module import).
-- **[pattern]** Insights command displays config score trends from history: read `readScoreHistory()`, compute trend direction (`up`/`down`/`stable`), and show delta with arrow symbol (↑/↓/→). Helps users visualize whether their config quality is improving.
 - **[gotcha]** `ora` spinners redirect stderr while active, so `console.error` output is swallowed during spinning. Use `console.log` for diagnostic output and place it **after** `spinner.succeed()` / `spinner.fail()` to ensure visibility.
 - **[gotcha]** Running `npx tsx -e "..."` with multi-line inline TypeScript often fails silently (empty output, timeouts). Write the script to a temp `.ts` file and run `npx tsx tempfile.ts` instead for reliable execution.
 - **[gotcha]** When testing caliber code from within a Claude Code session, the `CLAUDECODE` env var triggers "cannot be launched inside another Claude Code session" errors on any LLM call that uses the `claude-cli` provider. Prefix commands with `CLAUDECODE=` to unset it (e.g., `CLAUDECODE= npx tsx test-script.ts`).

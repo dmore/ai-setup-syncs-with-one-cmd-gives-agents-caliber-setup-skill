@@ -53,12 +53,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/rely-ai-org/caliber.git"
+    "url": "git+https://github.com/caliber-ai-org/ai-setup.git"
   },
   "bugs": {
-    "url": "https://github.com/rely-ai-org/caliber/issues"
+    "url": "https://github.com/caliber-ai-org/ai-setup/issues"
   },
-  "homepage": "https://github.com/rely-ai-org/caliber#readme",
+  "homepage": "https://github.com/caliber-ai-org/ai-setup#readme",
   "devDependencies": {
     "@types/diff": "^7.0.2",
     "@types/node": "^22.0.0",
