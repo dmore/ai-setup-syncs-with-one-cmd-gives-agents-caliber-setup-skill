@@ -1,6 +1,6 @@
 # Caliber
 
-**Hand-written `CLAUDE.md` files go stale the moment you refactor.** Your AI agent hallucinates paths that no longer exist, misses new dependencies, and gives advice based on yesterday's architecture. Caliber generates and maintains your AI context files (`CLAUDE.md`, `.cursor/rules/`, `AGENTS.md`) so they stay accurate as your code evolves — and keeps every agent on your team in sync, whether they use Claude Code, Cursor, Codex, or OpenCode.
+**Hand-written `CLAUDE.md` files go stale the moment you refactor.** Your AI agent hallucinates paths that no longer exist, misses new dependencies, and gives advice based on yesterday's architecture. Caliber generates and maintains your AI context files (`CLAUDE.md`, `.cursor/rules/`, `AGENTS.md`, `copilot-instructions.md`) so they stay accurate as your code evolves — and keeps every agent on your team in sync, whether they use Claude Code, Cursor, Codex, OpenCode, or GitHub Copilot.
 
 <p align="center">
   <img src="assets/demo-header.gif" alt="Caliber product demo" width="900">
@@ -15,6 +15,7 @@
   <img src="https://img.shields.io/badge/Cursor-supported-blue" alt="Cursor">
   <img src="https://img.shields.io/badge/Codex-supported-blue" alt="Codex">
   <img src="https://img.shields.io/badge/OpenCode-supported-blue" alt="OpenCode">
+  <img src="https://img.shields.io/badge/GitHub_Copilot-supported-blue" alt="GitHub Copilot">
 </p>
 
 ## Before / After
@@ -119,6 +120,9 @@ Pre-commit hooks run the refresh loop automatically. New team members get nudged
 - `AGENTS.md` — Project context (shared with Codex when both are targeted)
 - `.opencode/skills/*/SKILL.md` — Skills for OpenCode
 
+**GitHub Copilot**
+- `.github/copilot-instructions.md` — Project context for Copilot
+
 ## Key Features
 
 <details>
@@ -136,9 +140,10 @@ TypeScript, Python, Go, Rust, Java, Ruby, Terraform, and more. Language and fram
 caliber init --agent claude        # Claude Code only
 caliber init --agent cursor        # Cursor only
 caliber init --agent codex         # Codex only
-caliber init --agent opencode      # OpenCode only
-caliber init --agent all           # All platforms
-caliber init --agent claude,cursor # Comma-separated
+caliber init --agent opencode        # OpenCode only
+caliber init --agent github-copilot  # GitHub Copilot only
+caliber init --agent all             # All platforms
+caliber init --agent claude,cursor   # Comma-separated
 ```
 
 </details>
